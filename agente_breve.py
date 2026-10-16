@@ -260,7 +260,7 @@ Considera:
 - correlazione tra le idee: non tenere più idee che sono di fatto la stessa scommessa;
 - le statistiche storiche dei setup, se ci sono abbastanza idee chiuse (meno di 20 = poco affidabili).
 Sii selettivo: se nessun candidato convince, scartali tutti.
-Scrivi in italiano, concreto e sintetico. Rispondi compilando lo strumento salva_selezione."""
+Scrivi in italiano, concreto e sintetico, con i numeri in formato italiano (virgola decimale: 7,8%). Rispondi compilando lo strumento salva_selezione."""
 
 STRUMENTO = {
     "name": "salva_selezione",

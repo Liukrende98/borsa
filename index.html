@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Borsa · analisi</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EDF0F3; --surface:#FFFFFF; --surface2:#F5F7F9; --ink:#18212B; --muted:#5E6A78; --line:#D5DBE2;
+  --accent:#2847C9; --up:#13795B; --down:#B83A2E; --warn:#A86A00;
+  --up-bg:#E2F2EB; --down-bg:#F7E4E1; --neu-bg:#E8ECF1;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#10161D; --surface:#18202A; --surface2:#1E2834; --ink:#E4E9EF; --muted:#8D99A7; --line:#2A3542;
+    --accent:#7C97FF; --up:#3CC48F; --down:#F0786B; --warn:#E0A63A;
+    --up-bg:#16362B; --down-bg:#3D211E; --neu-bg:#243040;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10161D; --surface:#18202A; --surface2:#1E2834; --ink:#E4E9EF; --muted:#8D99A7; --line:#2A3542;
+  --accent:#7C97FF; --up:#3CC48F; --down:#F0786B; --warn:#E0A63A;
+  --up-bg:#16362B; --down-bg:#3D211E; --neu-bg:#243040;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+[hidden]{display:none!important}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"Manrope",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font-size:15px; line-height:1.5; font-variant-numeric:tabular-nums;
+  -webkit-font-smoothing:antialiased;
+}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+button,input,select{font:inherit;color:inherit}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+.wrap{max-width:980px;margin:0 auto;padding:0 16px 48px}
+
+/* testata */
+header{
+  position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);
+  display:flex;align-items:center;gap:12px;padding:14px 0 12px;border-bottom:1px solid var(--line);
+}
+header h1{font-size:20px;font-weight:800;margin:0;letter-spacing:-.01em}
+.stato{font-size:13px;color:var(--muted);margin-right:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stato.vecchio{color:var(--warn)}
+.btn{
+  border:1px solid var(--line);background:var(--surface);border-radius:10px;
+  padding:7px 12px;font-size:14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
+}
+.btn:hover{border-color:var(--muted)}
+.btn.primario{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn[disabled]{opacity:.5;cursor:default}
+.icona{width:38px;justify-content:center;padding:7px 0}
+
+/* sintesi AI */
+.sintesi{
+  margin:22px 0 8px;display:grid;grid-template-columns:6px 1fr;gap:0 18px;
+}
+.umore-bar{border-radius:3px;background:var(--muted)}
+.umore-positivo .umore-bar{background:var(--up)}
+.umore-negativo .umore-bar{background:var(--down)}
+.sintesi-testo{font-size:clamp(18px,2.4vw,22px);line-height:1.45;font-weight:500;margin:0;max-width:62ch;letter-spacing:-.005em}
+.sintesi-meta{margin-top:12px;font-size:13px;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 16px}
+.cambiamenti{margin:12px 0 0;font-size:15px;color:var(--muted);max-width:66ch}
+.cambiamenti b{color:var(--ink);font-weight:700}
+.evidenza{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.chip{
+  border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 12px;
+  font-size:13px;font-weight:600;cursor:pointer;
+}
+
+/* filtri */
+.filtri{display:flex;gap:6px;margin:26px 0 10px;overflow-x:auto;padding-bottom:2px}
+.filtri button{
+  border:0;background:transparent;padding:6px 12px;border-radius:8px;font-weight:600;font-size:14px;color:var(--muted);cursor:pointer;white-space:nowrap;
+}
+.filtri button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+
+/* lista titoli */
+.lista{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.riga{
+  display:grid;grid-template-columns:minmax(0,1fr) 96px 118px 92px;align-items:center;gap:12px;
+  padding:12px 16px;border-top:1px solid var(--line);cursor:pointer;background:none;border-left:0;border-right:0;border-bottom:0;width:100%;text-align:left;
+}
+.riga:first-child{border-top:0}
+.riga:hover{background:var(--surface2)}
+.riga[aria-expanded="true"]{background:var(--surface2)}
+.nome{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sim{font-size:12px;color:var(--muted)}
+.sim .vecchi{color:var(--warn);font-weight:600}
+.prezzo{text-align:right}
+.prezzo .p{font-weight:700}
+.var{font-size:13px;font-weight:700}
+.su{color:var(--up)} .giu{color:var(--down)} .piatto{color:var(--muted)}
+.giudizio{
+  justify-self:end;font-size:12px;font-weight:700;padding:3px 9px;border-radius:7px;background:var(--neu-bg);color:var(--muted);
+}
+.giudizio.rialzista{background:var(--up-bg);color:var(--up)}
+.giudizio.ribassista{background:var(--down-bg);color:var(--down)}
+.spark{width:96px;height:32px;display:block}
+
+/* dettaglio */
+.dettaglio{padding:6px 16px 20px;border-top:1px dashed var(--line);background:var(--surface2)}
+.dettaglio[hidden]{display:none}
+.periodi{display:flex;gap:4px;margin:12px 0 4px}
+.periodi button{border:1px solid var(--line);background:var(--surface);border-radius:7px;padding:3px 10px;font-size:13px;font-weight:600;cursor:pointer;color:var(--muted)}
+.periodi button[aria-pressed="true"]{color:var(--ink);border-color:var(--ink)}
+.legenda{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-left:auto;align-items:center}
+.legenda i{display:inline-block;width:14px;height:2px;vertical-align:middle;margin-right:5px}
+.grafico{position:relative}
+.grafico svg{width:100%;height:auto;display:block;touch-action:pan-y}
+.tip{
+  position:absolute;top:4px;pointer-events:none;background:var(--surface);border:1px solid var(--line);
+  border-radius:8px;padding:3px 8px;font-size:12px;font-weight:600;white-space:nowrap;transform:translateX(-50%)
+}
+.det-griglia{display:grid;grid-template-columns:1.2fr 1fr;gap:20px;margin-top:14px}
+.ai-box h3,.det-griglia h3{font-size:13px;color:var(--muted);font-weight:700;margin:0 0 6px}
+.ai-box p{margin:0 0 10px;max-width:62ch}
+.monitora{border-left:3px solid var(--accent);padding-left:10px;font-size:14px}
+.ind{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14px;margin:0}
+.ind dt{color:var(--muted)}
+.ind dd{margin:0;text-align:right;font-weight:600}
+.var-row{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;margin:10px 0 0}
+.var-row span{color:var(--muted)}
+.segnali{list-style:none;padding:0;margin:12px 0 0;display:grid;gap:5px;font-size:14px}
+.segnali li{padding-left:16px;position:relative}
+.segnali li::before{content:"";position:absolute;left:2px;top:.55em;width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.segnali li.positivo::before{background:var(--up)}
+.segnali li.negativo::before{background:var(--down)}
+.notizie{list-style:none;padding:0;margin:16px 0 0;display:grid;gap:8px;font-size:14px}
+.notizie a{color:var(--ink);text-decoration:none;font-weight:600}
+.notizie a:hover{text-decoration:underline}
+.notizie small{display:block;color:var(--muted);font-size:12px}
+
+/* storico */
+details.storico{margin-top:28px}
+details.storico summary{cursor:pointer;font-weight:700;font-size:16px;padding:6px 0}
+.storico ol{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:14px}
+.storico li{display:grid;grid-template-columns:4px 1fr;gap:0 12px}
+.storico li .umore-bar{border-radius:2px}
+.storico time{font-size:12px;color:var(--muted);font-weight:600}
+.storico p{margin:2px 0 0;font-size:14px;max-width:70ch}
+
+.vuoto{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px;margin-top:24px}
+.vuoto h2{margin:0 0 6px;font-size:18px}
+.vuoto p{margin:0 0 12px;color:var(--muted);max-width:60ch}
+.nota{margin-top:28px;font-size:12px;color:var(--muted)}
+
+/* impostazioni */
+dialog{border:1px solid var(--line);border-radius:16px;background:var(--surface);color:var(--ink);padding:22px;width:min(460px,92vw)}
+dialog::backdrop{background:rgba(10,15,20,.45)}
+dialog h2{margin:0 0 14px;font-size:18px}
+dialog label{display:block;font-size:13px;font-weight:700;margin:12px 0 4px}
+dialog input{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--surface2)}
+dialog .aiuto{font-size:12px;color:var(--muted);margin:4px 0 0}
+dialog .azioni{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
+
+.toast{
+  position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
+  background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;font-weight:600;z-index:20;max-width:90vw
+}
+.toast[hidden]{display:none}
+
+/* viste */
+.viste{display:flex;gap:4px;margin-top:12px}
+.viste button{border:0;background:transparent;font-weight:700;font-size:15px;padding:6px 2px;margin-right:16px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;border-radius:0}
+.viste button[aria-pressed="true"]{color:var(--ink);border-bottom-color:var(--ink)}
+
+/* idee breve termine */
+.commento-breve{margin:22px 0 4px;font-size:clamp(17px,2.2vw,20px);line-height:1.45;font-weight:500;max-width:64ch}
+.meta-breve{font-size:13px;color:var(--muted);margin:0 0 18px;display:flex;flex-wrap:wrap;gap:4px 16px}
+.indici{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px;margin:0 0 22px}
+.indici span{color:var(--muted)}
+h2.sez{font-size:17px;margin:30px 0 10px}
+.idee{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.idea{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.idea-testa{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.dir{font-size:12px;font-weight:800;padding:3px 9px;border-radius:7px}
+.dir.long{background:var(--up-bg);color:var(--up)}
+.dir.short{background:var(--down-bg);color:var(--down)}
+.idea svg{width:100%;height:auto;display:block}
+.livelli{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:10px 12px;margin:0}
+.livelli div{min-width:0}
+.livelli dt{font-size:11px;color:var(--muted);font-weight:600}
+.livelli dd{margin:0;font-weight:700;font-size:14px;white-space:nowrap}
+.livelli dd small{display:block;font-size:12px;font-weight:600}
+.idea p{margin:0;font-size:14px}
+.idea .rischio{color:var(--muted)}
+.idea-piede{font-size:12px;color:var(--muted);display:flex;justify-content:space-between;gap:8px;margin-top:auto}
+.fiducia{letter-spacing:2px;color:var(--accent)}
+.tab-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:14px}
+table.tab{border-collapse:collapse;width:100%;font-size:14px;min-width:520px}
+.tab th,.tab td{padding:9px 14px;text-align:right;border-top:1px solid var(--line);white-space:nowrap}
+.tab thead th{border-top:0;font-size:12px;color:var(--muted);font-weight:700}
+.tab th:first-child,.tab td:first-child{text-align:left}
+.tab tr.sotto td:first-child{padding-left:28px;color:var(--muted)}
+.avviso{font-size:13px;color:var(--warn);margin:8px 0 0}
+.esito{font-size:12px;font-weight:700;padding:2px 8px;border-radius:6px;background:var(--neu-bg);color:var(--muted)}
+.esito.target{background:var(--up-bg);color:var(--up)}
+.esito.stop{background:var(--down-bg);color:var(--down)}
+
+@media (max-width:640px){
+  .riga{grid-template-columns:minmax(0,1fr) 72px 100px;gap:10px;padding:12px}
+  .riga .giudizio{grid-column:1/-1;justify-self:start;margin-top:-4px}
+  .spark{width:72px}
+  .det-griglia{grid-template-columns:1fr}
+  .legenda{display:none}
+  header{flex-wrap:wrap;row-gap:4px}
+  header h1{font-size:18px;margin-right:auto}
+  .stato{order:5;width:100%;margin:0}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Borsa</h1>
+    <span class="stato" id="stato">Caricamento…</span>
+    <button class="btn" id="btnAggiorna" title="Ricarica i dati">Aggiorna</button>
+    <button class="btn primario" id="btnAnalizza" hidden title="Avvia subito una nuova analisi su GitHub">Analizza ora</button>
+    <button class="btn icona" id="btnImpostazioni" aria-label="Impostazioni" title="Impostazioni">⚙︎</button>
+  </header>
+  <nav class="viste" aria-label="Sezioni">
+    <button data-vista="mercato" aria-pressed="true">Mercato</button>
+    <button data-vista="breve" aria-pressed="false">Idee breve termine</button>
+  </nav>
+
+  <main id="contenuto"></main>
+
+  <p class="nota">Analisi automatica a scopo informativo: non è una consulenza finanziaria. Dati Yahoo Finance, possibile ritardo di 15–20 minuti sui titoli azionari. Le idee di breve termine sono simulate senza leva, con ingresso all'apertura successiva e un costo fisso per operazione: i CFD reali hanno spread, finanziamento overnight e leva che amplificano anche le perdite.</p>
+</div>
+
+<dialog id="dlg">
+  <form method="dialog" id="frmImpostazioni">
+    <h2>Impostazioni</h2>
+    <label for="inRepo">Repository GitHub</label>
+    <input id="inRepo" placeholder="Liukrende98/borsa" autocomplete="off" spellcheck="false">
+    <p class="aiuto">Vuoto = legge data.json accanto a questa pagina (GitHub Pages).</p>
+    <label for="inBranch">Branch dei dati</label>
+    <input id="inBranch" placeholder="dati" autocomplete="off" spellcheck="false">
+    <label for="inToken">Token GitHub (opzionale)</label>
+    <input id="inToken" type="password" placeholder="github_pat_…" autocomplete="off" spellcheck="false">
+    <p class="aiuto">Serve per un repo privato e per il pulsante «Analizza ora». Token fine-grained solo su questo repo con permessi Contents: read e Actions: read and write. Resta salvato solo su questo dispositivo.</p>
+    <label for="inTema">Tema</label>
+    <select id="inTema" style="width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--surface2)">
+      <option value="">Automatico</option>
+      <option value="light">Chiaro</option>
+      <option value="dark">Scuro</option>
+    </select>
+    <div class="azioni">
+      <button class="btn" value="annulla" type="submit">Annulla</button>
+      <button class="btn primario" value="salva" type="submit">Salva</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+"use strict";
+const CHIAVE = "borsa.impostazioni";
+const WORKFLOW = "analisi.yml";
+const AUTO_REFRESH_MS = 5 * 60 * 1000;
+
+let imp = {};
+try { imp = JSON.parse(localStorage.getItem(CHIAVE) || "{}") || {}; } catch (e) { imp = {}; }
+
+let dati = null, storico = [], idee = [], breve = null, filtro = "Tutti", aperto = null;
+let vista = imp.vista === "breve" ? "breve" : "mercato";
+const periodoPer = {};
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const urlSicuro = u => /^https?:\/\//i.test(u || "") ? u : "";
+
+function applicaTema() {
+  if (imp.tema) document.documentElement.setAttribute("data-theme", imp.tema);
+  else document.documentElement.removeAttribute("data-theme");
+}
+applicaTema();
+
+/* ---------- formattazione ---------- */
+function fmtPrezzo(v, valuta) {
+  if (v == null) return "—";
+  const dec = Math.abs(v) >= 1000 ? 2 : Math.abs(v) >= 1 ? 2 : 4;
+  try {
+    if (valuta && /^[A-Z]{3}$/.test(valuta))
+      return new Intl.NumberFormat("it-IT", { style: "currency", currency: valuta, minimumFractionDigits: dec, maximumFractionDigits: dec }).format(v);
+  } catch (e) {}
+  return new Intl.NumberFormat("it-IT", { minimumFractionDigits: dec, maximumFractionDigits: dec }).format(v);
+}
+const fmtNum = (v, d = 2) => v == null ? "—" : new Intl.NumberFormat("it-IT", { minimumFractionDigits: d, maximumFractionDigits: d }).format(v);
+const fmtPct = v => v == null ? "—" : (v > 0 ? "+" : v < 0 ? "−" : "") + fmtNum(Math.abs(v)) + "%";
+const clsVar = v => v == null || v === 0 ? "piatto" : v > 0 ? "su" : "giu";
+
+function fmtTempo(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return "";
+  const min = Math.round((Date.now() - d) / 60000);
+  const ora = d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+  const oggi = new Date().toDateString() === d.toDateString();
+  const quando = oggi ? `alle ${ora}` : `${d.toLocaleDateString("it-IT", { day: "numeric", month: "short" })} ${ora}`;
+  if (min < 1) return `${quando} (adesso)`;
+  if (min < 60) return `${quando} (${min} min fa)`;
+  if (min < 60 * 24) return `${quando} (${Math.round(min / 60)} h fa)`;
+  return quando;
+}
+
+/* ---------- caricamento ---------- */
+async function caricaFile(nome) {
+  let r;
+  if (imp.repo) {
+    const ramo = imp.branch || "dati";
+    if (imp.token) {
+      r = await fetch(`https://api.github.com/repos/${imp.repo}/contents/${nome}?ref=${encodeURIComponent(ramo)}&t=${Date.now()}`, {
+        headers: { Authorization: `Bearer ${imp.token}`, Accept: "application/vnd.github.raw+json" }, cache: "no-store"
+      });
+    } else {
+      r = await fetch(`https://raw.githubusercontent.com/${imp.repo}/${encodeURIComponent(ramo)}/${nome}?t=${Date.now()}`, { cache: "no-store" });
+    }
+  } else {
+    r = await fetch(`${nome}?t=${Date.now()}`, { cache: "no-store" });
+  }
+  if (!r.ok) throw new Error(`${nome}: risposta ${r.status}`);
+  return r.json();
+}
+
+async function carica(silenzioso) {
+  const btn = $("#btnAggiorna");
+  btn.disabled = true;
+  try {
+    const [d, s, i, b] = await Promise.all([
+      caricaFile("data.json").catch(e => { if (vista === "mercato") throw e; return null; }),
+      caricaFile("storico.json").catch(() => []),
+      caricaFile("idee.json").catch(() => []),
+      caricaFile("breve.json").catch(() => null)
+    ]);
+    dati = d; storico = Array.isArray(s) ? s : []; idee = Array.isArray(i) ? i : []; breve = b;
+    render();
+  } catch (e) {
+    if (!dati && !breve) renderVuoto(e.message);
+    else if (!silenzioso) toast(`Aggiornamento non riuscito: ${e.message}`);
+  } finally {
+    btn.disabled = false;
+    $("#btnAnalizza").hidden = !(imp.repo && imp.token);
+  }
+}
+
+/* ---------- avvio analisi su GitHub ---------- */
+async function analizzaOra() {
+  const btn = $("#btnAnalizza");
+  btn.disabled = true;
+  try {
+    const ramo = imp.ramoCodice || "main";
+    const wf = vista === "breve" ? "breve.yml" : WORKFLOW;
+    const corpo = vista === "breve" ? { ref: ramo } : { ref: ramo, inputs: { forza_ai: "true" } };
+    const r = await fetch(`https://api.github.com/repos/${imp.repo}/actions/workflows/${wf}/dispatches`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${imp.token}`, Accept: "application/vnd.github+json", "Content-Type": "application/json" },
+      body: JSON.stringify(corpo)
+    });
+    if (r.status !== 204) throw new Error(`GitHub ha risposto ${r.status}`);
+    toast(vista === "breve" ? "Scansione avviata: le idee arrivano in 2–3 minuti" : "Analisi avviata: i risultati arrivano in 1–2 minuti");
+    [90, 150, 240].forEach(s => setTimeout(() => carica(true), s * 1000));
+  } catch (e) {
+    toast(`Avvio non riuscito: ${e.message}. Controlla token e permessi Actions.`);
+  } finally {
+    setTimeout(() => { btn.disabled = false; }, 30000);
+  }
+}
+
+/* ---------- render ---------- */
+function renderVuoto(msg) {
+  $("#stato").textContent = "Nessun dato";
+  $("#contenuto").innerHTML = `
+    <section class="vuoto">
+      <h2>Dati non trovati</h2>
+      <p>${esc(msg)}. Se il workflow non è ancora girato, avvialo da GitHub (Actions → Analisi borsa → Run workflow). Se il repo è privato, inserisci repository e token nelle impostazioni.</p>
+      <button class="btn primario" onclick="apriImpostazioni()">Apri impostazioni</button>
+    </section>`;
+}
+
+function render() {
+  document.querySelectorAll("[data-vista]").forEach(b => b.setAttribute("aria-pressed", b.dataset.vista === vista));
+  if (vista === "breve") return renderBreve();
+  if (!dati) return renderVuoto("data.json non trovato");
+  const st = $("#stato");
+  const minuti = (Date.now() - new Date(dati.aggiornato)) / 60000;
+  st.textContent = `Aggiornato ${fmtTempo(dati.aggiornato)}`;
+  st.classList.toggle("vecchio", minuti > 180);
+  st.title = minuti > 180 ? "Ultimo aggiornamento più vecchio di 3 ore: fuori orario di mercato o workflow fermo" : "";
+
+  const ai = dati.ai;
+  const giudizi = {};
+  (ai?.titoli || []).forEach(t => { giudizi[t.simbolo] = t; });
+  const nomi = {};
+  dati.titoli.forEach(t => { nomi[t.simbolo] = t.nome; });
+
+  let h = "";
+  if (ai) {
+    h += `<section class="sintesi umore-${esc(ai.umore)}" aria-label="Sintesi dell'analisi">
+      <div class="umore-bar"></div>
+      <div>
+        <p class="sintesi-testo">${esc(ai.sintesi)}</p>
+        ${ai.cambiamenti ? `<p class="cambiamenti"><b>Cosa è cambiato.</b> ${esc(ai.cambiamenti)}</p>` : ""}
+        ${(ai.in_evidenza || []).length ? `<div class="evidenza">${ai.in_evidenza.map(s =>
+          `<button class="chip" data-vai="${esc(s)}">${esc(nomi[s] || s)}</button>`).join("")}</div>` : ""}
+        <div class="sintesi-meta">
+          <span>Umore: <b>${esc(ai.umore || "—")}</b></span>
+          <span>Analisi ${esc(fmtTempo(ai.generata))}</span>
+          <span>${esc(ai.modello || "")}</span>
+        </div>
+      </div>
+    </section>`;
+  }
+
+  const mercati = ["Tutti", ...new Set(dati.titoli.map(t => t.mercato).filter(Boolean))];
+  if (!mercati.includes(filtro)) filtro = "Tutti";
+  h += `<nav class="filtri" aria-label="Filtra per mercato">${mercati.map(m =>
+    `<button data-filtro="${esc(m)}" aria-pressed="${m === filtro}">${esc(m)}</button>`).join("")}</nav>`;
+
+  h += `<div class="lista">`;
+  dati.titoli.filter(t => filtro === "Tutti" || t.mercato === filtro).forEach(t => {
+    const g = giudizi[t.simbolo];
+    const v1 = t.var?.["1g"];
+    const id = idDi(t.simbolo);
+    const ap = aperto === t.simbolo;
+    h += `<button class="riga" data-sim="${esc(t.simbolo)}" aria-expanded="${ap}" aria-controls="det-${id}">
+        <div><div class="nome">${esc(t.nome)}</div>
+          <div class="sim">${esc(t.simbolo)}${t.dati_vecchi ? ` · <span class="vecchi">dati non aggiornati</span>` : ""}</div></div>
+        ${sparkline(t)}
+        <div class="prezzo"><div class="p">${fmtPrezzo(t.prezzo, t.valuta)}</div><div class="var ${clsVar(v1)}">${fmtPct(v1)}</div></div>
+        <span class="giudizio ${esc(g?.giudizio || "")}">${esc(g?.giudizio || "—")}</span>
+      </button>
+      <div class="dettaglio" id="det-${id}" ${ap ? "" : "hidden"}>${ap ? dettaglio(t, g) : ""}</div>`;
+  });
+  h += `</div>`;
+
+  if (storico.length) {
+    h += `<details class="storico"><summary>Storico analisi (${storico.length})</summary><ol>${
+      storico.slice().reverse().slice(0, 40).map(s => `<li class="umore-${esc(s.umore)}"><div class="umore-bar"></div><div>
+        <time>${esc(new Date(s.data).toLocaleString("it-IT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))} · ${esc(s.umore || "")}</time>
+        <p>${esc(s.sintesi)}</p></div></li>`).join("")}</ol></details>`;
+  }
+
+  $("#contenuto").innerHTML = h;
+  if (aperto) collegaGrafico(aperto);
+}
+
+const idDi = s => s.replace(/[^a-z0-9]/gi, "_");
+
+function dettaglio(t, g) {
+  const i = t.indicatori || {}, v = t.var || {};
+  const per = periodoPer[t.simbolo] || "6M";
+  const rel = (a, b) => a != null && b != null ? fmtPct((a / b - 1) * 100) : "—";
+  return `
+    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px">
+      <div class="periodi" role="group" aria-label="Periodo">${["1G", "1M", "3M", "6M", "1A"].map(p =>
+        `<button data-periodo="${p}" data-per-sim="${esc(t.simbolo)}" aria-pressed="${p === per}">${p}</button>`).join("")}</div>
+      ${per === "1G" ? "" : `<div class="legenda"><span><i style="background:var(--ink)"></i>Prezzo</span><span><i style="background:var(--accent)"></i>Media 20</span><span><i style="background:var(--warn)"></i>Media 50</span></div>`}
+    </div>
+    <div class="grafico" id="graf-${idDi(t.simbolo)}">${grafico(t, per)}</div>
+    <div class="var-row">${[["5 giorni", v["5g"]], ["1 mese", v["1m"]], ["3 mesi", v["3m"]], ["Da inizio anno", v.ytd]].map(([l, x]) =>
+      `<div><span>${l}</span> <b class="${clsVar(x)}">${fmtPct(x)}</b></div>`).join("")}</div>
+    <div class="det-griglia">
+      <div class="ai-box">
+        <h3>Commento AI</h3>
+        ${g ? `<p>${esc(g.commento)}</p>${g.da_monitorare ? `<p class="monitora">${esc(g.da_monitorare)}</p>` : ""}` : `<p style="color:var(--muted)">Nessun commento per questo titolo nell'ultima analisi.</p>`}
+        ${(t.segnali || []).length ? `<h3 style="margin-top:14px">Segnali tecnici</h3><ul class="segnali">${t.segnali.map(s => `<li class="${esc(s.tipo)}">${esc(s.testo)}</li>`).join("")}</ul>` : ""}
+      </div>
+      <div>
+        <h3>Indicatori</h3>
+        <dl class="ind">
+          <dt>RSI 14</dt><dd>${fmtNum(i.rsi14, 1)}</dd>
+          <dt>Prezzo vs media 50</dt><dd>${rel(t.prezzo, i.sma50)}</dd>
+          <dt>Prezzo vs media 200</dt><dd>${rel(t.prezzo, i.sma200)}</dd>
+          <dt>MACD (istogramma)</dt><dd class="${clsVar(i.macd_hist)}">${fmtNum(i.macd_hist, 3)}</dd>
+          <dt>Volatilità 20 gg</dt><dd>${i.volatilita20 == null ? "—" : fmtNum(i.volatilita20, 1) + "%"}</dd>
+          <dt>Distanza dal massimo 52 sett.</dt><dd>${fmtPct(i.dist_max52)}</dd>
+          <dt>Massimo / minimo 52 sett.</dt><dd>${fmtPrezzo(i.max52, t.valuta)} / ${fmtPrezzo(i.min52, t.valuta)}</dd>
+          <dt>Volume vs media</dt><dd>${i.volume_rel == null ? "—" : fmtNum(i.volume_rel, 2) + "×"}</dd>
+        </dl>
+      </div>
+    </div>
+    ${(t.notizie || []).length ? `<h3 style="font-size:13px;color:var(--muted);margin:18px 0 0">Notizie</h3><ul class="notizie">${t.notizie.map(n => {
+      const u = urlSicuro(n.url);
+      const quando = n.data ? new Date(n.data).toLocaleDateString("it-IT", { day: "numeric", month: "short" }) : "";
+      return `<li>${u ? `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(n.titolo)}</a>` : esc(n.titolo)}<small>${esc([n.fonte, quando].filter(Boolean).join(" · "))}</small></li>`;
+    }).join("")}</ul>` : ""}`;
+}
+
+/* ---------- grafici SVG ---------- */
+function puntiIntraday(t) {
+  const pts = (t.intraday || []).filter(p => p[1] != null);
+  if (!pts.length) return [];
+  if (t.mercato === "Crypto") {
+    const lim = pts[pts.length - 1][0] - 24 * 3600;
+    return pts.filter(p => p[0] >= lim);
+  }
+  const giorno = ts => new Date(ts * 1000).toDateString();
+  const ultimo = giorno(pts[pts.length - 1][0]);
+  let oggi = pts.filter(p => giorno(p[0]) === ultimo);
+  if (oggi.length < 4) {
+    const prima = pts.filter(p => giorno(p[0]) !== ultimo);
+    const g2 = prima.length ? giorno(prima[prima.length - 1][0]) : null;
+    oggi = pts.filter(p => giorno(p[0]) === ultimo || giorno(p[0]) === g2);
+  }
+  return oggi;
+}
+
+function sparkline(t) {
+  const pts = puntiIntraday(t);
+  const val = pts.length >= 2 ? pts.map(p => p[1]) : (t.serie || []).slice(-20).map(p => p[1]).filter(v => v != null);
+  if (val.length < 2) return `<svg class="spark" viewBox="0 0 96 32" aria-hidden="true"></svg>`;
+  const rif = pts.length >= 2 && t.mercato !== "Crypto" ? t.chiusura_prec : val[0];
+  const tutti = rif != null ? [...val, rif] : val;
+  const min = Math.min(...tutti), max = Math.max(...tutti), dy = max - min || 1;
+  const W = 96, H = 32, P = 2;
+  const x = i => P + i * (W - 2 * P) / (val.length - 1);
+  const y = v => H - P - (v - min) / dy * (H - 2 * P);
+  const d = val.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
+  const col = val[val.length - 1] >= rif ? "var(--up)" : "var(--down)";
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" aria-hidden="true">
+    ${rif != null ? `<line x1="0" x2="${W}" y1="${y(rif).toFixed(1)}" y2="${y(rif).toFixed(1)}" stroke="var(--line)" stroke-dasharray="2 3"/>` : ""}
+    <path d="${d}" fill="none" stroke="${col}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+}
+
+function media(arr, n) {
+  const out = new Array(arr.length).fill(null);
+  let s = 0;
+  for (let i = 0; i < arr.length; i++) {
+    s += arr[i];
+    if (i >= n) s -= arr[i - n];
+    if (i >= n - 1) out[i] = s / n;
+  }
+  return out;
+}
+
+const datiGrafico = {};
+
+function grafico(t, per) {
+  let etichette, valori, sma20 = null, sma50 = null, rif = null;
+  if (per === "1G") {
+    const pts = puntiIntraday(t);
+    etichette = pts.map(p => new Date(p[0] * 1000).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" }));
+    valori = pts.map(p => p[1]);
+    if (t.mercato !== "Crypto") rif = t.chiusura_prec;
+  } else {
+    const serie = (t.serie || []).filter(p => p[1] != null);
+    const tutti = serie.map(p => p[1]);
+    const m20 = media(tutti, 20), m50 = media(tutti, 50);
+    const giorni = { "1M": 22, "3M": 66, "6M": 130, "1A": 260 }[per];
+    const da = Math.max(0, serie.length - giorni);
+    etichette = serie.slice(da).map(p => new Date(p[0]).toLocaleDateString("it-IT", { day: "numeric", month: "short" }));
+    valori = tutti.slice(da);
+    sma20 = m20.slice(da); sma50 = m50.slice(da);
+  }
+  if (valori.length < 2) return `<p style="color:var(--muted);font-size:14px">Dati insufficienti per questo periodo.</p>`;
+
+  const stretto = window.innerWidth < 640;
+  const W = stretto ? 360 : 640, H = stretto ? 210 : 230, PL = 4, PR = stretto ? 54 : 62, PT = 12, PB = 24;
+  const extra = [...(sma20 || []), ...(sma50 || []), rif].filter(v => v != null);
+  const min = Math.min(...valori, ...extra), max = Math.max(...valori, ...extra);
+  const pad = (max - min) * 0.06 || 1;
+  const lo = min - pad, hi = max + pad;
+  const x = i => PL + i * (W - PL - PR) / (valori.length - 1);
+  const y = v => PT + (hi - v) / (hi - lo) * (H - PT - PB);
+  const path = arr => arr.map((v, i) => v == null ? null : [x(i), y(v)])
+    .reduce((acc, p) => { if (!p) { acc.nuovo = true; return acc; } acc.d += `${acc.nuovo ? "M" : "L"}${p[0].toFixed(1)},${p[1].toFixed(1)}`; acc.nuovo = false; return acc; }, { d: "", nuovo: true }).d;
+
+  const base = rif ?? valori[0];
+  const col = valori[valori.length - 1] >= base ? "var(--up)" : "var(--down)";
+  const dPrezzo = path(valori);
+  const area = `${dPrezzo}L${x(valori.length - 1).toFixed(1)},${H - PB}L${x(0).toFixed(1)},${H - PB}Z`;
+  const tacche = [0, 0.25, 0.5, 0.75, 1].map(f => lo + (hi - lo) * f);
+  const gid = "g" + idDi(t.simbolo);
+
+  datiGrafico[t.simbolo] = { etichette, valori, x, y, W, PL, PR, valuta: t.valuta };
+
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Grafico ${esc(t.nome)} periodo ${per}">
+    <defs><linearGradient id="${gid}" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="${col}" stop-opacity=".16"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs>
+    ${tacche.map(v => `<line x1="${PL}" x2="${W - PR}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="var(--line)" stroke-width="1"/>
+      <text x="${W - PR + 6}" y="${(y(v) + 4).toFixed(1)}" font-size="11" fill="var(--muted)">${esc(fmtNum(v, v >= 1000 ? 0 : 2))}</text>`).join("")}
+    ${rif != null ? `<line x1="${PL}" x2="${W - PR}" y1="${y(rif).toFixed(1)}" y2="${y(rif).toFixed(1)}" stroke="var(--muted)" stroke-dasharray="3 4"/>` : ""}
+    <path d="${area}" fill="url(#${gid})"/>
+    ${sma50 ? `<path d="${path(sma50)}" fill="none" stroke="var(--warn)" stroke-width="1.3"/>` : ""}
+    ${sma20 ? `<path d="${path(sma20)}" fill="none" stroke="var(--accent)" stroke-width="1.3"/>` : ""}
+    <path d="${dPrezzo}" fill="none" stroke="var(--ink)" stroke-width="1.8" stroke-linejoin="round"/>
+    <text x="${PL}" y="${H - 6}" font-size="11" fill="var(--muted)">${esc(etichette[0])}</text>
+    <text x="${W - PR}" y="${H - 6}" font-size="11" fill="var(--muted)" text-anchor="end">${esc(etichette[etichette.length - 1])}</text>
+    <line class="cursore" x1="0" x2="0" y1="${PT}" y2="${H - PB}" stroke="var(--muted)" visibility="hidden"/>
+    <circle class="punto" r="3.5" fill="var(--ink)" visibility="hidden"/>
+    <rect class="area-tocco" x="${PL}" y="0" width="${W - PL - PR}" height="${H}" fill="transparent"/>
+  </svg><div class="tip" hidden></div>`;
+}
+
+function collegaGrafico(sim) {
+  const box = document.getElementById("graf-" + idDi(sim));
+  const g = datiGrafico[sim];
+  if (!box || !g) return;
+  const svg = box.querySelector("svg"), tip = box.querySelector(".tip");
+  if (!svg) return;
+  const cur = svg.querySelector(".cursore"), pt = svg.querySelector(".punto");
+  const muovi = ev => {
+    const r = svg.getBoundingClientRect();
+    const sx = (ev.clientX - r.left) / r.width * g.W;
+    const n = g.valori.length;
+    const i = Math.max(0, Math.min(n - 1, Math.round((sx - g.PL) / (g.W - g.PL - g.PR) * (n - 1))));
+    const px = g.x(i), py = g.y(g.valori[i]);
+    cur.setAttribute("x1", px); cur.setAttribute("x2", px); cur.setAttribute("visibility", "visible");
+    pt.setAttribute("cx", px); pt.setAttribute("cy", py); pt.setAttribute("visibility", "visible");
+    tip.hidden = false;
+    tip.textContent = `${g.etichette[i]}  ${fmtPrezzo(g.valori[i], g.valuta)}`;
+    const left = px / g.W * r.width;
+    tip.style.left = Math.max(60, Math.min(r.width - 60, left)) + "px";
+  };
+  const esci = () => { cur.setAttribute("visibility", "hidden"); pt.setAttribute("visibility", "hidden"); tip.hidden = true; };
+  svg.addEventListener("pointermove", muovi);
+  svg.addEventListener("pointerdown", muovi);
+  svg.addEventListener("pointerleave", esci);
+}
+
+/* ---------- idee breve termine ---------- */
+const ESITI = { target: "Target", stop: "Stop", scaduta: "Scaduta", annullata: "Ingresso saltato", aperta: "Aperta" };
+
+function renderBreve() {
+  const st = $("#stato");
+  st.classList.remove("vecchio"); st.title = "";
+  if (!breve) {
+    st.textContent = "Nessuna scansione";
+    $("#contenuto").innerHTML = `<section class="vuoto"><h2>Nessuna idea ancora</h2>
+      <p>L'agente gira ogni sera feriale dopo la chiusura USA. Per avviarlo subito: GitHub → Actions → Agente breve termine → Run workflow.</p></section>`;
+    return;
+  }
+  st.textContent = `Scansione ${fmtTempo(breve.generato)}`;
+  const perId = Object.fromEntries(idee.map(i => [i.id, i]));
+  // da eseguire = segnali non ancora entrati; in corso = già entrati all'apertura successiva
+  const attive = idee.filter(i => i.stato === "aperta" && i.ai_tenuta !== false);
+  const oggi = attive.filter(i => i.ingresso == null);
+  const aperte = attive.filter(i => i.ingresso != null);
+  const chiuse = idee.filter(i => i.stato !== "aperta" && i.ai_tenuta !== false).slice(-40).reverse();
+
+  let h = "";
+  if (breve.commento) h += `<p class="commento-breve">${esc(breve.commento)}</p>`;
+  h += `<p class="meta-breve"><span>${breve.universo} strumenti scansionati</span><span>${breve.candidati} candidati</span><span>${(breve.idee_oggi || []).length} idee tenute</span>${breve.modello ? `<span>${esc(breve.modello)}</span>` : ""}</p>`;
+  if ((breve.contesto || []).length)
+    h += `<div class="indici">${breve.contesto.map(c => `<div><span>${esc(c.nome)}</span> <b class="${clsVar(c.var_1g)}">${fmtPct(c.var_1g)}</b> <span>5 gg</span> <b class="${clsVar(c.var_5g)}">${fmtPct(c.var_5g)}</b></div>`).join("")}</div>`;
+
+  h += `<h2 class="sez">Idee da valutare</h2>`;
+  h += oggi.length ? `<div class="idee">${oggi.map(cartaIdea).join("")}</div>`
+    : `<p style="color:var(--muted)">Nessuna idea nuova: anche non operare è una scelta.</p>`;
+
+  if (aperte.length) h += `<h2 class="sez">In corso</h2><div class="idee">${aperte.map(cartaIdea).join("")}</div>`;
+
+  h += `<h2 class="sez">Come stanno andando</h2>${tabellaStatistiche(breve.statistiche)}`;
+
+  if (chiuse.length) {
+    h += `<h2 class="sez">Idee chiuse</h2><div class="tab-wrap"><table class="tab"><thead><tr>
+      <th>Strumento</th><th>Segnale</th><th>Direzione</th><th>Esito</th><th>Sedute</th><th>Rendimento</th><th>R</th></tr></thead><tbody>
+      ${chiuse.map(i => `<tr><td><b>${esc(i.nome)}</b> <span class="sim">${esc(i.setup)}</span></td>
+        <td>${esc(fmtData(i.data_segnale))}</td><td>${i.direzione === "long" ? "Long" : "Short"}</td>
+        <td><span class="esito ${esc(i.stato)}">${esc(ESITI[i.stato] || i.stato)}</span></td>
+        <td>${i.sedute ?? "—"}</td><td class="${clsVar(i.rendimento_pct)}">${fmtPct(i.rendimento_pct)}</td>
+        <td>${i.r == null ? "—" : fmtNum(i.r, 2)}</td></tr>`).join("")}
+      </tbody></table></div>`;
+  }
+  $("#contenuto").innerHTML = h;
+}
+
+const fmtData = d => d ? new Date(d).toLocaleDateString("it-IT", { day: "numeric", month: "short" }) : "";
+
+function cartaIdea(i) {
+  const d = i.direzione === "long" ? 1 : -1;
+  const base = i.ingresso ?? i.prezzo_segnale;
+  const pct = v => fmtPct((v / base - 1) * 100);
+  const fid = i.fiducia ? "●".repeat(i.fiducia) + "○".repeat(Math.max(0, 5 - i.fiducia)) : "";
+  const stato = i.stato === "aperta" && i.ingresso != null
+    ? `In corso da ${i.sedute} sedute: <b class="${clsVar(i.rendimento_corrente_pct)}">${fmtPct(i.rendimento_corrente_pct)}</b>`
+    : `Segnale del ${esc(fmtData(i.data_segnale))}, ingresso all'apertura successiva`;
+  return `<article class="idea">
+    <div class="idea-testa"><div><div class="nome">${esc(i.nome)}</div><div class="sim">${esc(i.simbolo)} · ${esc(i.setup)}</div></div>
+      <span class="dir ${esc(i.direzione)}">${d > 0 ? "Long" : "Short"}</span></div>
+    ${graficoIdea(i)}
+    <dl class="livelli">
+      <div><dt>${i.ingresso != null ? "Ingresso" : "Prezzo segnale"}</dt><dd>${fmtNum(base, base < 10 ? 4 : 2)}</dd></div>
+      <div><dt>Stop</dt><dd class="giu">${fmtNum(i.stop, i.stop < 10 ? 4 : 2)}<small>${pct(i.stop)}</small></dd></div>
+      <div><dt>Target</dt><dd class="su">${fmtNum(i.target, i.target < 10 ? 4 : 2)}<small>${pct(i.target)}</small></dd></div>
+      <div><dt>Rischio/resa</dt><dd>1 : ${fmtNum(i.rr, 1)}</dd></div>
+    </dl>
+    <p>${esc(i.motivazione || i.motivo)}</p>
+    ${i.motivazione ? `<p class="rischio">${esc(i.motivo)}</p>` : ""}
+    ${i.rischio ? `<p class="rischio">Rischio: ${esc(i.rischio)}</p>` : ""}
+    <div class="idea-piede"><span>${stato}</span>${fid ? `<span class="fiducia" title="Fiducia ${i.fiducia} su 5">${fid}</span>` : ""}</div>
+  </article>`;
+}
+
+function graficoIdea(i) {
+  const serie = (breve.grafici || {})[i.simbolo];
+  if (!serie || serie.length < 2) return "";
+  const val = serie.map(p => p[1]);
+  const livelli = [i.stop, i.target, i.ingresso ?? i.prezzo_segnale];
+  const min = Math.min(...val, ...livelli), max = Math.max(...val, ...livelli);
+  const W = 320, H = 110, P = 4, PR = 4;
+  const x = k => P + k * (W - P - PR) / (val.length - 1);
+  const y = v => P + (max - v) / (max - min || 1) * (H - 2 * P);
+  const d = val.map((v, k) => `${k ? "L" : "M"}${x(k).toFixed(1)},${y(v).toFixed(1)}`).join("");
+  const linea = (v, col, tratt) => `<line x1="0" x2="${W}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="${col}" stroke-width="1.2" ${tratt ? 'stroke-dasharray="4 3"' : ""}/>`;
+  const yS = y(i.stop), yT = y(i.target);
+  return `<svg viewBox="0 0 ${W} ${H}" aria-label="Ultime 60 sedute con ingresso, stop e target">
+    <rect x="0" width="${W}" y="${Math.min(yS, y(livelli[2])).toFixed(1)}" height="${Math.abs(yS - y(livelli[2])).toFixed(1)}" fill="var(--down)" opacity=".07"/>
+    <rect x="0" width="${W}" y="${Math.min(yT, y(livelli[2])).toFixed(1)}" height="${Math.abs(yT - y(livelli[2])).toFixed(1)}" fill="var(--up)" opacity=".07"/>
+    ${linea(i.target, "var(--up)", true)}${linea(i.stop, "var(--down)", true)}${linea(livelli[2], "var(--muted)", true)}
+    <path d="${d}" fill="none" stroke="var(--ink)" stroke-width="1.5" stroke-linejoin="round"/></svg>`;
+}
+
+function tabellaStatistiche(s) {
+  if (!s || !s.tenute || !s.tenute.n) return `<p style="color:var(--muted)">Ancora nessuna idea chiusa: le statistiche compaiono dopo le prime uscite (target, stop o scadenza).</p>`;
+  const riga = (nome, a, cls = "") => `<tr class="${cls}"><td>${esc(nome)}</td><td>${a.n}</td>
+    <td>${a.n ? fmtNum(a.vincenti_pct, 0) + "%" : "—"}</td><td class="${clsVar(a.rend_medio)}">${a.n ? fmtPct(a.rend_medio) : "—"}</td>
+    <td>${a.r_medio == null ? "—" : fmtNum(a.r_medio, 2)}</td><td class="${clsVar(a.r_totale)}">${a.r_totale == null ? "—" : fmtNum(a.r_totale, 1)}</td></tr>`;
+  let h = `<div class="tab-wrap"><table class="tab"><thead><tr><th></th><th>Chiuse</th><th>Vincenti</th><th>Rend. medio</th><th>R medio</th><th>R totale</th></tr></thead><tbody>`;
+  h += riga("Tenute da Claude", s.tenute);
+  Object.entries(s.per_setup || {}).forEach(([k, a]) => { h += riga(k, a, "sotto"); });
+  if (s.scartate && s.scartate.n) h += riga("Scartate da Claude (simulate)", s.scartate);
+  h += `</tbody></table></div>`;
+  if (s.tenute.n < 30) h += `<p class="avviso">Solo ${s.tenute.n} idee chiuse: servono almeno 30-50 operazioni prima che questi numeri dicano qualcosa.</p>`;
+  h += `<p class="nota" style="margin-top:8px">R = guadagno o perdita in multipli del rischio iniziale (−1 = stop pieno). Un R medio stabilmente sopra zero, e migliore per le idee tenute rispetto alle scartate, è il segnale che il sistema funziona.</p>`;
+  return h;
+}
+
+/* ---------- eventi ---------- */
+document.addEventListener("click", ev => {
+  const vb = ev.target.closest("[data-vista]");
+  if (vb) {
+    vista = vb.dataset.vista; imp.vista = vista;
+    try { localStorage.setItem(CHIAVE, JSON.stringify(imp)); } catch (e) {}
+    render(); return;
+  }
+
+  const f = ev.target.closest("[data-filtro]");
+  if (f) { filtro = f.dataset.filtro; render(); return; }
+
+  const p = ev.target.closest("[data-periodo]");
+  if (p) { periodoPer[p.dataset.perSim] = p.dataset.periodo; render(); return; }
+
+  const vai = ev.target.closest("[data-vai]");
+  if (vai) {
+    filtro = "Tutti"; aperto = vai.dataset.vai; render();
+    document.querySelector(`.riga[data-sim="${CSS.escape(aperto)}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+
+  const riga = ev.target.closest(".riga");
+  if (riga) { aperto = aperto === riga.dataset.sim ? null : riga.dataset.sim; render(); }
+});
+
+$("#btnAggiorna").addEventListener("click", () => carica(false));
+$("#btnAnalizza").addEventListener("click", analizzaOra);
+$("#btnImpostazioni").addEventListener("click", apriImpostazioni);
+
+function apriImpostazioni() {
+  $("#inRepo").value = imp.repo || "";
+  $("#inBranch").value = imp.branch || "";
+  $("#inToken").value = imp.token || "";
+  $("#inTema").value = imp.tema || "";
+  $("#dlg").showModal();
+}
+
+$("#dlg").addEventListener("close", () => {
+  if ($("#dlg").returnValue !== "salva") return;
+  imp = {
+    ...imp,
+    repo: $("#inRepo").value.trim().replace(/^https?:\/\/github\.com\//, "").replace(/\/$/, ""),
+    branch: $("#inBranch").value.trim(),
+    token: $("#inToken").value.trim(),
+    tema: $("#inTema").value
+  };
+  try { localStorage.setItem(CHIAVE, JSON.stringify(imp)); } catch (e) {}
+  applicaTema();
+  dati = null; breve = null;
+  carica(false);
+});
+
+let timerToast;
+function toast(msg) {
+  const t = $("#toast");
+  t.textContent = msg; t.hidden = false;
+  clearTimeout(timerToast);
+  timerToast = setTimeout(() => { t.hidden = true; }, 4500);
+}
+
+carica(false);
+setInterval(() => { if (!document.hidden) carica(true); }, AUTO_REFRESH_MS);
+document.addEventListener("visibilitychange", () => { if (!document.hidden && dati) carica(true); });
+</script>
+</body>
+</html>
