@@ -1,0 +1,68 @@
+name: Analisi borsa
+
+on:
+  schedule:
+    # Orari in UTC. Giorni feriali ogni 30 min dalle 7 alle 21:30 UTC (apertura Milano -> chiusura USA)
+    - cron: "*/30 7-21 * * 1-5"
+    # Weekend ogni 3 ore (si muovono solo le crypto)
+    - cron: "0 */3 * * 0,6"
+  workflow_dispatch:
+    inputs:
+      forza_ai:
+        description: "Rifai subito l'analisi AI"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: analisi-borsa
+  cancel-in-progress: false
+
+jobs:
+  analisi:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Installa dipendenze
+        run: pip install -r requirements.txt
+
+      - name: Recupera i dati precedenti dal branch dati
+        run: |
+          mkdir -p docs
+          if git ls-remote --exit-code origin dati >/dev/null 2>&1; then
+            git fetch --depth=1 origin dati
+            TMP=$(mktemp -d)
+            git archive origin/dati | tar -x -C "$TMP"
+            cp "$TMP"/*.json docs/ 2>/dev/null || true
+          fi
+
+      - name: Esegui analisi
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          FORZA_AI: ${{ inputs.forza_ai }}
+        run: python scripts/analisi.py
+
+      - name: Pubblica sul branch dati (un solo commit, nessuno storico git)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ls docs/*.json >/dev/null 2>&1 || { echo "Nessun file da pubblicare"; exit 0; }
+          PUB=$(mktemp -d)
+          cp docs/index.html docs/*.json "$PUB"/
+          touch "$PUB/.nojekyll"
+          cd "$PUB"
+          git init -q -b dati
+          git config user.name "analisi-bot"
+          git config user.email "analisi-bot@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Analisi $(date -u +'%Y-%m-%d %H:%M') UTC"
+          git push -q -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" dati
