@@ -73,6 +73,18 @@ def fondamentali():
     return len(campi) >= 3, f"campi presenti: {campi}"
 
 
+def calendario_nasdaq():
+    import arricchisci
+    cal = arricchisci.calendario_nasdaq(10)
+    return arricchisci._calendario_ok and len(cal) > 20, f"{len(cal)} società con trimestrale nei prossimi 10 giorni"
+
+
+def fondamentali_nasdaq():
+    import arricchisci
+    f = arricchisci.fondamentali_nasdaq("MSFT")
+    return len(f) >= 4, f"campi: {f}"
+
+
 def news_yfinance():
     n = yf.Ticker("NVDA").news or []
     return len(n) > 0, f"{len(n)} notizie"
@@ -112,6 +124,8 @@ def main():
     prova("Download Yahoo blocco da 100 azioni", download_blocco)
     prova("Date trimestrali (yfinance calendar)", calendario)
     prova("Fondamentali (yfinance info)", fondamentali)
+    prova("Trimestrali dal calendario Nasdaq", calendario_nasdaq)
+    prova("Fondamentali dal Nasdaq", fondamentali_nasdaq)
     prova("Notizie yfinance", news_yfinance)
     prova("Notizie Yahoo RSS", rss("Yahoo RSS", "https://feeds.finance.yahoo.com/rss/2.0/headline?s=NVDA&region=US&lang=en-US", "Yahoo Finance"))
     prova("Notizie Bing RSS", rss("Bing News", "https://www.bing.com/news/search?q=Nvidia+stock&format=rss"))
@@ -122,7 +136,7 @@ def main():
     for ok, nome, dett, _ in risultati:
         print(f"{'✅' if ok else '❌'} {nome}")
     notizie_ok = any(ok for ok, nome, _, _ in risultati if nome.startswith("Notizie"))
-    essenziali = [r for r in risultati if not r[1].startswith("Notizie") and not r[1].startswith("Fondamentali")
+    essenziali = [r for r in risultati if not r[1].startswith("Notizie") and not r[1].startswith("Fondamentali (yfinance")
                   and not r[1].startswith("Date")]
     pronto = all(ok for ok, *_ in essenziali) and notizie_ok
     print("\nPRONTO per lanciare l'agente breve." if pronto else

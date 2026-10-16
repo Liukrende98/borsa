@@ -375,6 +375,7 @@ Come valutare:
 - Catalizzatori e rischi nelle notizie: un movimento spiegato da una notizia forte vale più di uno casuale; notizie negative contro un long sono un campanello d'allarme.
 - Fondamentali come filtro: evita long su società in forte deterioramento, evita short su titoli con short interest altissimo (rischio squeeze).
 - Diversificazione: non tenere più idee che sono la stessa scommessa (stesso settore, stessa direzione, stesso fattore).
+- Trimestrale: se è "SCONOSCIUTA" per un'azione, c'è il rischio di un gap sui risultati dentro la finestra: abbassa la fiducia o scarta.
 - Lezioni e statistiche storiche: applicale se poggiano su abbastanza casi.
 Sii selettivo: meglio zero idee che idee mediocri.
 Italiano, numeri con la virgola decimale. Rispondi compilando lo strumento salva_selezione con TUTTI i candidati."""
@@ -519,11 +520,13 @@ def main():
     finestra = int(cfg_b.get("giorni_max", 10) * 1.5)
     for c in candidati[:cfg_b.get("candidati_scan", 60)]:
         if c["mercato"] in arricchisci.AZIONI:
-            t = arricchisci.prossima_trimestrale(c["simbolo"])
+            t, stato = arricchisci.prossima_trimestrale(c["simbolo"], c["mercato"], finestra)
             if t and (t - oggi).days <= finestra:
                 esclusi_trim += 1
                 continue
-            c["trimestrale"] = t.isoformat() if t else None
+            c["trimestrale"] = (t.isoformat() if t else
+                                f"nessuna nei prossimi {finestra} giorni" if stato == "nessuna" else
+                                "SCONOSCIUTA (non verificabile: trattala come rischio)")
         finalisti.append(c)
         if len(finalisti) >= cfg_b.get("candidati_max", 30):
             break
@@ -533,7 +536,7 @@ def main():
     for c in finalisti:
         v = per_simbolo.get(c["simbolo"], c)
         if c["mercato"] in arricchisci.AZIONI:
-            c["fondamentali"] = arricchisci.fondamentali(c["simbolo"])
+            c["fondamentali"] = arricchisci.fondamentali(c["simbolo"], c["mercato"])
             if not c.get("settore"):
                 c["settore"] = c["fondamentali"].get("settore", "")
         try:

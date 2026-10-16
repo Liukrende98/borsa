@@ -31,8 +31,9 @@ def chiama(cfg, modello, sistema, prompt, strumento, voce, max_tokens=16000, eff
     client = anthropic.Anthropic()
     forzato = {"type": "tool", "name": strumento["name"]}
     pensa = {"thinking": {"type": "adaptive"}, "output_config": {"effort": effort}} if effort else None
-    # ordine dei tentativi: ragionamento + strumento forzato, ragionamento + strumento libero, solo strumento
-    varianti = ([(pensa, forzato), (pensa, {"type": "auto"})] if pensa else []) + [(None, forzato)]
+    # ordine dei tentativi: ragionamento + strumento libero (l'API non accetta lo strumento forzato
+    # insieme al ragionamento), poi ragionamento + forzato, infine solo strumento forzato
+    varianti = ([(pensa, {"type": "auto"}), (pensa, forzato)] if pensa else []) + [(None, forzato)]
 
     i = 0
     errori_rete = 0

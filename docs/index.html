@@ -177,6 +177,7 @@ dialog .azioni{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
 .toast[hidden]{display:none}
 
 /* imbuto, regime, critico, lezioni */
+.avviso-prova{margin:12px 0;padding:10px 14px;border-radius:10px;background:var(--neu-bg);border-left:4px solid var(--warn);font-size:14px;max-width:72ch}
 .critico-breve{margin:0 0 10px;font-size:15px;color:var(--muted);max-width:66ch}
 .critico-breve b{color:var(--ink)}
 .imbuto{list-style:none;padding:0;margin:14px 0 8px;display:flex;flex-wrap:wrap;gap:6px}
@@ -679,9 +680,13 @@ function renderBreve() {
   let h = "";
   if (breve.commento) h += `<p class="commento-breve">${esc(breve.commento)}</p>`;
   if (breve.commento_critico) h += `<p class="critico-breve"><b>Il critico.</b> ${esc(breve.commento_critico)}</p>`;
-  const passi = [[breve.scaricati ?? breve.universo, "strumenti analizzati"], [breve.candidati, "segnali tecnici"],
-    [breve.analizzati, "approfonditi"], [breve.rosa, "proposti dall'analista"], [(breve.idee_oggi || []).length, "confermati"]]
+  const passi = (breve.prova
+    ? [[breve.scaricati ?? breve.universo, "strumenti analizzati"], [breve.candidati, "segnali tecnici"],
+       [breve.analizzati, "approfonditi"], [(breve.anteprima || []).length, "migliori per punteggio (senza AI)"]]
+    : [[breve.scaricati ?? breve.universo, "strumenti analizzati"], [breve.candidati, "segnali tecnici"],
+       [breve.analizzati, "approfonditi"], [breve.rosa, "proposti dall'analista"], [(breve.idee_oggi || []).length, "confermati"]])
     .filter(p => p[0] != null);
+  if (breve.prova) h += `<p class="avviso-prova"><b>Run di prova senza AI.</b> Claude non è stato chiamato e le idee qui sotto non sono registrate: servono solo a verificare che dati e filtri funzionino.</p>`;
   h += `<ol class="imbuto">${passi.map(p => `<li><b>${fmtNum(p[0], 0)}</b> ${p[1]}</li>`).join("")}</ol>`;
   const esclusi = [breve.esclusi_trimestrale ? `${breve.esclusi_trimestrale} esclusi per trimestrale vicina` : "",
     breve.esclusi_liquidita ? `${breve.esclusi_liquidita} poco liquidi` : ""].filter(Boolean);
@@ -698,6 +703,8 @@ function renderBreve() {
   if ((breve.contesto || []).length)
     h += `<div class="indici">${breve.contesto.map(c => `<div><span>${esc(c.nome)}</span> <b class="${clsVar(c.var_1g)}">${fmtPct(c.var_1g)}</b> <span>5 gg</span> <b class="${clsVar(c.var_5g)}">${fmtPct(c.var_5g)}</b></div>`).join("")}</div>`;
 
+  if (breve.prova && (breve.anteprima || []).length)
+    h += `<h2 class="sez">Anteprima della prova (non registrate)</h2><div class="idee">${breve.anteprima.map(cartaIdea).join("")}</div>`;
   h += `<h2 class="sez">Idee da valutare</h2>`;
   h += oggi.length ? `<div class="idee">${oggi.map(cartaIdea).join("")}</div>`
     : `<p style="color:var(--muted)">Nessuna idea nuova: anche non operare è una scelta.</p>`;
