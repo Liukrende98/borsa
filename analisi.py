@@ -17,7 +17,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
+import requests
 import yfinance as yf
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import costi  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG = ROOT / "config.json"
@@ -88,12 +92,77 @@ def valuta(t):
         return ""
 
 
-def notizie(t, max_n):
+UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36"}
+
+
+_FONTI_KO = {}  # fonte -> fallimenti consecutivi in questo run
+
+
+def _leggi_rss(nome_fonte, url, max_n, fonte_default=""):
+    """Legge un feed RSS; dopo 2 errori consecutivi la fonte viene saltata per il resto del run."""
+    import xml.etree.ElementTree as ET
+    from email.utils import parsedate_to_datetime
+    from urllib.parse import urlparse, parse_qs
+    if _FONTI_KO.get(nome_fonte, 0) >= 2:
+        return []
+    try:
+        r = requests.get(url, headers=UA, timeout=8)
+        r.raise_for_status()
+        root = ET.fromstring(r.content)
+        _FONTI_KO[nome_fonte] = 0
+    except Exception as e:
+        _FONTI_KO[nome_fonte] = _FONTI_KO.get(nome_fonte, 0) + 1
+        if _FONTI_KO[nome_fonte] == 2:
+            log(f"  fonte notizie {nome_fonte} non raggiungibile ({e}): la salto per questo run")
+        return []
+    out = []
+    for it in root.iter("item"):
+        titolo = (it.findtext("title") or "").strip()
+        if not titolo:
+            continue
+        fonte = fonte_default
+        for el in it:
+            if el.tag.split("}")[-1].lower() == "source" and (el.text or "").strip():
+                fonte = el.text.strip()
+        if fonte and titolo.endswith(" - " + fonte):
+            titolo = titolo[: -len(fonte) - 3]
+        link = it.findtext("link") or ""
+        if "bing.com" in link and "url=" in link:  # link di Bing: estrae l'URL vero
+            link = parse_qs(urlparse(link).query).get("url", [link])[0]
+        try:
+            data = parsedate_to_datetime(it.findtext("pubDate")).isoformat()
+        except Exception:
+            data = ""
+        out.append({"titolo": titolo, "url": link, "fonte": fonte, "data": data})
+        if len(out) >= max_n:
+            break
+    return out
+
+
+def notizie_web(query, simbolo=None, max_n=4):
+    """Notizie recenti da fonti RSS alternative, in ordine di affidabilità dai server GitHub."""
+    from urllib.parse import urlencode, quote
+    tentativi = []
+    if simbolo:
+        tentativi.append(("Yahoo RSS", "https://feeds.finance.yahoo.com/rss/2.0/headline?"
+                          + urlencode({"s": simbolo, "region": "US", "lang": "en-US"}), "Yahoo Finance"))
+    if query:
+        tentativi.append(("Bing News", "https://www.bing.com/news/search?" + urlencode({"q": query, "format": "rss"}), ""))
+        tentativi.append(("Google News", "https://news.google.com/rss/search?"
+                          + urlencode({"q": f"{query} when:7d", "hl": "en-US", "gl": "US", "ceid": "US:en"}), ""))
+    for nome, url, predef in tentativi:
+        out = _leggi_rss(nome, url, max_n, predef)
+        if out:
+            return out
+    return []
+
+
+def notizie(t, max_n, query=None):
     out = []
     try:
         items = t.news or []
     except Exception:
-        return out
+        items = []
     for it in items:
         if len(out) >= max_n:
             break
@@ -109,7 +178,20 @@ def notizie(t, max_n):
         if not data and it.get("providerPublishTime"):
             data = datetime.fromtimestamp(it["providerPublishTime"], timezone.utc).isoformat()
         out.append({"titolo": titolo, "url": url, "fonte": fonte, "data": data})
+    if not out:
+        out = notizie_web(query, getattr(t, "ticker", None), max_n)
     return out
+
+
+def query_notizie(voce):
+    """Testo di ricerca per le news in base al tipo di strumento."""
+    nome = voce.get("nome") or voce["simbolo"]
+    m = voce.get("mercato", "")
+    if m == "Crypto":
+        return f"{nome} crypto"
+    if m in ("Valute", "Materie prime", "Indice", "ETF"):
+        return nome
+    return f'"{nome}" stock'
 
 
 def rsi(close, n=14):
@@ -248,7 +330,7 @@ Regole:
 - Distingui i fatti (dati) dalle interpretazioni.
 - Non dare ordini di acquisto/vendita né target di prezzo: descrivi il quadro, i rischi e cosa monitorare.
 - Se le notizie sono poche o generiche, non trarne conclusioni forti.
-- Scrivi in italiano, in modo concreto e sintetico.
+- Scrivi in italiano, in modo concreto e sintetico, con i numeri in formato italiano (virgola decimale: 7,8%).
 - Rispondi compilando lo strumento salva_analisi."""
 
 SCHEMA = """{
@@ -332,6 +414,9 @@ def analisi_claude(cfg, titoli, precedente):
     if not key:
         log("ANTHROPIC_API_KEY mancante: salto l'analisi AI")
         return None
+    if not costi.disponibile(cfg, 0.01):
+        log("Budget mensile API esaurito: salto l'analisi AI")
+        return None
     import anthropic
 
     ora = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -355,6 +440,7 @@ def analisi_claude(cfg, titoli, precedente):
                 tools=[STRUMENTO],
                 tool_choice={"type": "tool", "name": STRUMENTO["name"]},
             )
+            costi.registra(cfg, cfg["modello"], resp.usage, "monitor")
             ai = risposta_strumento(resp)
             ai["generata"] = ora_iso()
             ai["modello"] = cfg["modello"]
@@ -406,7 +492,7 @@ def main():
             "nome": voce.get("nome", s),
             "mercato": voce.get("mercato", ""),
             "valuta": voce.get("valuta") or valuta(t),
-            "notizie": notizie(t, cfg.get("notizie_per_titolo", 5)),
+            "notizie": notizie(t, cfg.get("notizie_per_titolo", 5), query=query_notizie(voce)),
             "dati_vecchi": False,
         })
         titoli.append(dati)
