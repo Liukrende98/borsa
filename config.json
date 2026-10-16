@@ -1,4 +1,19 @@
 {
+  "budget_mensile_usd": 20,
+  "prezzi_usd_mtok": {
+    "claude-haiku-5-5": [
+      0.1,
+      0.5
+    ],
+    "claude-sonnet-5-5": [
+      2.0,
+      10.0
+    ],
+    "claude-opus-5-5": [
+      4.0,
+      20.0
+    ]
+  },
   "modello": "claude-haiku-5-5",
   "max_token_risposta": 6000,
   "ai_ogni_minuti": 60,
@@ -63,13 +78,28 @@
     }
   ],
   "breve": {
-    "modello": "claude-sonnet-5-5",
-    "max_token_risposta": 6000,
-    "candidati_max": 12,
+    "modello_analista": "claude-sonnet-5-5",
+    "modello_critico": "claude-opus-5-5",
+    "modello_retrospettiva": "claude-opus-5-5",
+    "ragionamento": "high",
+    "usa_cap_min": 2000000000,
+    "usa_volume_min": 200000,
+    "usa_max": 2000,
+    "universo_giorni": 7,
+    "liquidita_min_usd": 5000000,
+    "liquidita_min_eur": 2000000,
+    "candidati_scan": 60,
+    "candidati_max": 30,
+    "shortlist_max": 8,
     "idee_max": 5,
     "rr_minimo": 1.5,
     "giorni_max": 10,
     "costo_pct": 0.1,
+    "giorno_retrospettiva": 4,
+    "retrospettiva_min_chiuse": 10,
+    "retrospettiva_giorni": 90,
+    "registro_max": 6000,
+    "blocco_download": 100,
     "universo": [
       {
         "simbolo": "FTSEMIB.MI",

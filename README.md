@@ -53,14 +53,24 @@ Una chiamata per analisi con tutti i titoli insieme. Il consumo di token di ogni
 
 ## Agente breve termine (`scripts/agente_breve.py`, `breve.yml`)
 
-Gira ogni sera feriale alle 22:15 UTC. Ogni giro:
-1. **Valuta** le idee aperte con le candele nuove: target, stop o scadenza (default 10 sedute).
-   Ingresso simulato all'apertura successiva, senza leva, con `costo_pct` per operazione.
-   Se stop e target cadono nella stessa candela, conta lo stop.
-2. **Scansiona** `breve.universo` con setup a regole fisse: breakout/breakdown a 20 giorni, pullback nel trend,
-   rimbalzo da ipervenduto, storno da ipercomprato. Stop e target sono calcolati sull'ATR.
-3. **Claude** (`breve.modello`) tiene o scarta ogni candidato, senza toccare i livelli.
-4. **Registra tutto** in `idee.json`, anche le idee scartate, per misurare se il filtro AI aggiunge valore.
+Gira ogni sera feriale alle 22:15 UTC (dura 10-25 minuti). Pipeline a imbuto:
 
-Parametri in `config.json → breve`: `idee_max`, `candidati_max`, `rr_minimo`, `giorni_max`, `costo_pct`, `universo`.
-Un'idea resta "da guardare" finché non ci sono almeno 30-50 operazioni chiuse.
+1. **Universo** (`universo.py`, ricostruito ogni 7 giorni): tutte le azioni USA con capitalizzazione > 2 mld $
+   dallo screener Nasdaq (~2000), più Italia, Europa, ETF, indici, crypto, valute e materie prime (`liste.json`).
+2. **Valutatore**: aggiorna le idee aperte (target, stop, scadenza).
+3. **Scanner** su tutto l'universo: 6 setup a regole fisse, filtro di liquidità, punteggio con forza relativa
+   (vs S&P 500 / Euro Stoxx 50), forza del settore e regime di mercato (VIX, % titoli sopra la media a 50 giorni).
+4. **Filtro trimestrali**: esclude le azioni con risultati attesi dentro la finestra del trade.
+5. **Arricchimento** dei 30 finalisti: fondamentali (`arricchisci.py`) e notizie (Yahoo, riserva Google News).
+6. **Analista** (`modello_analista`, ragionamento esteso): valuta tutti i finalisti e propone fino a 8 idee.
+7. **Critico** (`modello_critico`): avvocato del diavolo, conferma al massimo 5 idee.
+8. **Registro**: salva anche le idee scartate e bocciate, per misurare se ogni filtro aggiunge valore.
+9. **Retrospettiva** (`retrospettiva.py`, il venerdì): rilegge le idee chiuse, scrive lezioni che l'analista
+   usa le sere successive e propone modifiche alle regole, che decidi tu.
+
+## Budget
+
+`budget_mensile_usd` in `config.json` (default 20 $). Ogni chiamata registra il suo costo in `costi.json`;
+quando il budget sta per finire gli agenti saltano Claude e usano solo il punteggio dello scanner.
+Spesa stimata: circa 0,4 $ a sera per l'agente breve, meno di 2 $ al mese per il monitor.
+Per sicurezza imposta anche un limite di spesa nella Console Anthropic.

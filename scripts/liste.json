@@ -1,0 +1,1071 @@
+{
+ "italia": [
+  {
+   "simbolo": "A2A.MI",
+   "nome": "A2A",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "AMP.MI",
+   "nome": "Amplifon",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "AZM.MI",
+   "nome": "Azimut",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "BAMI.MI",
+   "nome": "Banco BPM",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "BMED.MI",
+   "nome": "Banca Mediolanum",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "BMPS.MI",
+   "nome": "Monte dei Paschi",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "BPE.MI",
+   "nome": "BPER Banca",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "BZU.MI",
+   "nome": "Buzzi",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "CPR.MI",
+   "nome": "Campari",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "DIA.MI",
+   "nome": "DiaSorin",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "ENEL.MI",
+   "nome": "Enel",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "ENI.MI",
+   "nome": "Eni",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "ERG.MI",
+   "nome": "ERG",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "FBK.MI",
+   "nome": "FinecoBank",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "G.MI",
+   "nome": "Generali",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "HER.MI",
+   "nome": "Hera",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "IG.MI",
+   "nome": "Italgas",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "INW.MI",
+   "nome": "Inwit",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "IP.MI",
+   "nome": "Interpump",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "ISP.MI",
+   "nome": "Intesa Sanpaolo",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "IVG.MI",
+   "nome": "Iveco",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "LDO.MI",
+   "nome": "Leonardo",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "MONC.MI",
+   "nome": "Moncler",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "NEXI.MI",
+   "nome": "Nexi",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "PIRC.MI",
+   "nome": "Pirelli",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "PRY.MI",
+   "nome": "Prysmian",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "PST.MI",
+   "nome": "Poste Italiane",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "RACE.MI",
+   "nome": "Ferrari",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "REC.MI",
+   "nome": "Recordati",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "SPM.MI",
+   "nome": "Saipem",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "SRG.MI",
+   "nome": "Snam",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "STLAM.MI",
+   "nome": "Stellantis",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "STMMI.MI",
+   "nome": "STMicroelectronics",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "TEN.MI",
+   "nome": "Tenaris",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "TIT.MI",
+   "nome": "Telecom Italia",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "TRN.MI",
+   "nome": "Terna",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "UCG.MI",
+   "nome": "UniCredit",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "UNI.MI",
+   "nome": "Unipol",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "AVIO.MI",
+   "nome": "Avio",
+   "mercato": "Italia"
+  },
+  {
+   "simbolo": "FCT.MI",
+   "nome": "Fincantieri",
+   "mercato": "Italia"
+  }
+ ],
+ "europa": [
+  {
+   "simbolo": "ADS.DE",
+   "nome": "Adidas",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "ALV.DE",
+   "nome": "Allianz",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "BAS.DE",
+   "nome": "BASF",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "BAYN.DE",
+   "nome": "Bayer",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "BEI.DE",
+   "nome": "Beiersdorf",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "BMW.DE",
+   "nome": "BMW",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "CBK.DE",
+   "nome": "Commerzbank",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "CON.DE",
+   "nome": "Continental",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "DB1.DE",
+   "nome": "Deutsche Börse",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "DBK.DE",
+   "nome": "Deutsche Bank",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "DHL.DE",
+   "nome": "DHL Group",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "DTE.DE",
+   "nome": "Deutsche Telekom",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "DTG.DE",
+   "nome": "Daimler Truck",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "ENR.DE",
+   "nome": "Siemens Energy",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "EOAN.DE",
+   "nome": "E.ON",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "HEI.DE",
+   "nome": "Heidelberg Materials",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "HEN3.DE",
+   "nome": "Henkel",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "HNR1.DE",
+   "nome": "Hannover Rück",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "IFX.DE",
+   "nome": "Infineon",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "MBG.DE",
+   "nome": "Mercedes-Benz",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "MRK.DE",
+   "nome": "Merck KGaA",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "MTX.DE",
+   "nome": "MTU Aero Engines",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "MUV2.DE",
+   "nome": "Munich Re",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "P911.DE",
+   "nome": "Porsche",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "RHM.DE",
+   "nome": "Rheinmetall",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "RWE.DE",
+   "nome": "RWE",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "SAP.DE",
+   "nome": "SAP",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "SHL.DE",
+   "nome": "Siemens Healthineers",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "SIE.DE",
+   "nome": "Siemens",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "SRT3.DE",
+   "nome": "Sartorius",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "SY1.DE",
+   "nome": "Symrise",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "VNA.DE",
+   "nome": "Vonovia",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "VOW3.DE",
+   "nome": "Volkswagen",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "ZAL.DE",
+   "nome": "Zalando",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "AC.PA",
+   "nome": "Accor",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "AI.PA",
+   "nome": "Air Liquide",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "AIR.PA",
+   "nome": "Airbus",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "BN.PA",
+   "nome": "Danone",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "BNP.PA",
+   "nome": "BNP Paribas",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "CA.PA",
+   "nome": "Carrefour",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "CAP.PA",
+   "nome": "Capgemini",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "CS.PA",
+   "nome": "AXA",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "DG.PA",
+   "nome": "Vinci",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "DSY.PA",
+   "nome": "Dassault Systèmes",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "EL.PA",
+   "nome": "EssilorLuxottica",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "EN.PA",
+   "nome": "Bouygues",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "ENGI.PA",
+   "nome": "Engie",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "ERF.PA",
+   "nome": "Eurofins",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "GLE.PA",
+   "nome": "Société Générale",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "HO.PA",
+   "nome": "Thales",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "KER.PA",
+   "nome": "Kering",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "LR.PA",
+   "nome": "Legrand",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "MC.PA",
+   "nome": "LVMH",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "ML.PA",
+   "nome": "Michelin",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "OR.PA",
+   "nome": "L'Oréal",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "ORA.PA",
+   "nome": "Orange",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "PUB.PA",
+   "nome": "Publicis",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "RI.PA",
+   "nome": "Pernod Ricard",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "RMS.PA",
+   "nome": "Hermès",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "RNO.PA",
+   "nome": "Renault",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "SAF.PA",
+   "nome": "Safran",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "SAN.PA",
+   "nome": "Sanofi",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "SGO.PA",
+   "nome": "Saint-Gobain",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "SU.PA",
+   "nome": "Schneider Electric",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "TTE.PA",
+   "nome": "TotalEnergies",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "VIE.PA",
+   "nome": "Veolia",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "VIV.PA",
+   "nome": "Vivendi",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "ASML.AS",
+   "nome": "ASML",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "ADYEN.AS",
+   "nome": "Adyen",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "INGA.AS",
+   "nome": "ING",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "PRX.AS",
+   "nome": "Prosus",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "HEIA.AS",
+   "nome": "Heineken",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "AD.AS",
+   "nome": "Ahold Delhaize",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "PHIA.AS",
+   "nome": "Philips",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "WKL.AS",
+   "nome": "Wolters Kluwer",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "UMG.AS",
+   "nome": "Universal Music",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "SAN.MC",
+   "nome": "Banco Santander",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "BBVA.MC",
+   "nome": "BBVA",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "IBE.MC",
+   "nome": "Iberdrola",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "ITX.MC",
+   "nome": "Inditex",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "TEF.MC",
+   "nome": "Telefónica",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "REP.MC",
+   "nome": "Repsol",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "AMS.MC",
+   "nome": "Amadeus",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "CABK.MC",
+   "nome": "CaixaBank",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "NESN.SW",
+   "nome": "Nestlé",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "NOVN.SW",
+   "nome": "Novartis",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "ROG.SW",
+   "nome": "Roche",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "UBSG.SW",
+   "nome": "UBS",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "ZURN.SW",
+   "nome": "Zurich Insurance",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "ABBN.SW",
+   "nome": "ABB",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "CFR.SW",
+   "nome": "Richemont",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "SHEL.L",
+   "nome": "Shell",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "AZN.L",
+   "nome": "AstraZeneca",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "HSBA.L",
+   "nome": "HSBC",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "ULVR.L",
+   "nome": "Unilever",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "BP.L",
+   "nome": "BP",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "RIO.L",
+   "nome": "Rio Tinto",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "GSK.L",
+   "nome": "GSK",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "BARC.L",
+   "nome": "Barclays",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "NOVO-B.CO",
+   "nome": "Novo Nordisk",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "ERIC-B.ST",
+   "nome": "Ericsson",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "VOLV-B.ST",
+   "nome": "Volvo",
+   "mercato": "Europa"
+  },
+  {
+   "simbolo": "NOKIA.HE",
+   "nome": "Nokia",
+   "mercato": "Europa"
+  }
+ ],
+ "etf": [
+  {
+   "simbolo": "SPY",
+   "nome": "SPDR S&P 500",
+   "mercato": "ETF"
+  },
+  {
+   "simbolo": "QQQ",
+   "nome": "Invesco QQQ",
+   "mercato": "ETF"
+  },
+  {
+   "simbolo": "IWM",
+   "nome": "iShares Russell 2000",
+   "mercato": "ETF"
+  },
+  {
+   "simbolo": "DIA",
+   "nome": "SPDR Dow Jones",
+   "mercato": "ETF"
+  },
+  {
+   "simbolo": "GLD",
+   "nome": "SPDR Gold",
+   "mercato": "ETF"
+  },
+  {
+   "simbolo": "SLV",
+   "nome": "iShares Silver",
+   "mercato": "ETF"
+  },
+  {
+   "simbolo": "TLT",
+   "nome": "iShares 20+ Year Treasury",
+   "mercato": "ETF"
+  },
+  {
+   "simbolo": "XLK",
+   "nome": "Tecnologia USA",
+   "mercato": "ETF"
+  },
+  {
+   "simbolo": "XLF",
+   "nome": "Finanziari USA",
+   "mercato": "ETF"
+  },
+  {
+   "simbolo": "XLE",
+   "nome": "Energia USA",
+   "mercato": "ETF"
+  },
+  {
+   "simbolo": "XLV",
+   "nome": "Sanità USA",
+   "mercato": "ETF"
+  },
+  {
+   "simbolo": "XLI",
+   "nome": "Industriali USA",
+   "mercato": "ETF"
+  },
+  {
+   "simbolo": "XLY",
+   "nome": "Consumi discrezionali USA",
+   "mercato": "ETF"
+  },
+  {
+   "simbolo": "XLP",
+   "nome": "Beni di prima necessità USA",
+   "mercato": "ETF"
+  },
+  {
+   "simbolo": "XLU",
+   "nome": "Utility USA",
+   "mercato": "ETF"
+  },
+  {
+   "simbolo": "XLB",
+   "nome": "Materiali USA",
+   "mercato": "ETF"
+  },
+  {
+   "simbolo": "XLRE",
+   "nome": "Immobiliare USA",
+   "mercato": "ETF"
+  },
+  {
+   "simbolo": "XLC",
+   "nome": "Comunicazioni USA",
+   "mercato": "ETF"
+  },
+  {
+   "simbolo": "SMH",
+   "nome": "Semiconduttori",
+   "mercato": "ETF"
+  },
+  {
+   "simbolo": "ARKK",
+   "nome": "ARK Innovation",
+   "mercato": "ETF"
+  },
+  {
+   "simbolo": "EEM",
+   "nome": "Mercati emergenti",
+   "mercato": "ETF"
+  },
+  {
+   "simbolo": "FXI",
+   "nome": "Cina large cap",
+   "mercato": "ETF"
+  },
+  {
+   "simbolo": "EWZ",
+   "nome": "Brasile",
+   "mercato": "ETF"
+  },
+  {
+   "simbolo": "EWJ",
+   "nome": "Giappone",
+   "mercato": "ETF"
+  },
+  {
+   "simbolo": "URA",
+   "nome": "Uranio",
+   "mercato": "ETF"
+  },
+  {
+   "simbolo": "ITA",
+   "nome": "Difesa USA",
+   "mercato": "ETF"
+  }
+ ],
+ "indici": [
+  {
+   "simbolo": "^GSPC",
+   "nome": "S&P 500",
+   "mercato": "Indice"
+  },
+  {
+   "simbolo": "^NDX",
+   "nome": "Nasdaq 100",
+   "mercato": "Indice"
+  },
+  {
+   "simbolo": "^DJI",
+   "nome": "Dow Jones",
+   "mercato": "Indice"
+  },
+  {
+   "simbolo": "^RUT",
+   "nome": "Russell 2000",
+   "mercato": "Indice"
+  },
+  {
+   "simbolo": "^GDAXI",
+   "nome": "DAX",
+   "mercato": "Indice"
+  },
+  {
+   "simbolo": "^FCHI",
+   "nome": "CAC 40",
+   "mercato": "Indice"
+  },
+  {
+   "simbolo": "FTSEMIB.MI",
+   "nome": "FTSE MIB",
+   "mercato": "Indice"
+  },
+  {
+   "simbolo": "^STOXX50E",
+   "nome": "Euro Stoxx 50",
+   "mercato": "Indice"
+  },
+  {
+   "simbolo": "^N225",
+   "nome": "Nikkei 225",
+   "mercato": "Indice"
+  },
+  {
+   "simbolo": "^FTSE",
+   "nome": "FTSE 100",
+   "mercato": "Indice"
+  }
+ ],
+ "crypto": [
+  {
+   "simbolo": "BTC-USD",
+   "nome": "Bitcoin",
+   "mercato": "Crypto"
+  },
+  {
+   "simbolo": "ETH-USD",
+   "nome": "Ethereum",
+   "mercato": "Crypto"
+  },
+  {
+   "simbolo": "SOL-USD",
+   "nome": "Solana",
+   "mercato": "Crypto"
+  },
+  {
+   "simbolo": "XRP-USD",
+   "nome": "XRP",
+   "mercato": "Crypto"
+  },
+  {
+   "simbolo": "BNB-USD",
+   "nome": "BNB",
+   "mercato": "Crypto"
+  },
+  {
+   "simbolo": "ADA-USD",
+   "nome": "Cardano",
+   "mercato": "Crypto"
+  },
+  {
+   "simbolo": "DOGE-USD",
+   "nome": "Dogecoin",
+   "mercato": "Crypto"
+  },
+  {
+   "simbolo": "AVAX-USD",
+   "nome": "Avalanche",
+   "mercato": "Crypto"
+  },
+  {
+   "simbolo": "LINK-USD",
+   "nome": "Chainlink",
+   "mercato": "Crypto"
+  },
+  {
+   "simbolo": "DOT-USD",
+   "nome": "Polkadot",
+   "mercato": "Crypto"
+  },
+  {
+   "simbolo": "LTC-USD",
+   "nome": "Litecoin",
+   "mercato": "Crypto"
+  },
+  {
+   "simbolo": "TRX-USD",
+   "nome": "Tron",
+   "mercato": "Crypto"
+  },
+  {
+   "simbolo": "XLM-USD",
+   "nome": "Stellar",
+   "mercato": "Crypto"
+  }
+ ],
+ "valute": [
+  {
+   "simbolo": "EURUSD=X",
+   "nome": "EUR/USD",
+   "mercato": "Valute"
+  },
+  {
+   "simbolo": "GBPUSD=X",
+   "nome": "GBP/USD",
+   "mercato": "Valute"
+  },
+  {
+   "simbolo": "USDJPY=X",
+   "nome": "USD/JPY",
+   "mercato": "Valute"
+  },
+  {
+   "simbolo": "USDCHF=X",
+   "nome": "USD/CHF",
+   "mercato": "Valute"
+  },
+  {
+   "simbolo": "AUDUSD=X",
+   "nome": "AUD/USD",
+   "mercato": "Valute"
+  },
+  {
+   "simbolo": "USDCAD=X",
+   "nome": "USD/CAD",
+   "mercato": "Valute"
+  },
+  {
+   "simbolo": "NZDUSD=X",
+   "nome": "NZD/USD",
+   "mercato": "Valute"
+  },
+  {
+   "simbolo": "EURGBP=X",
+   "nome": "EUR/GBP",
+   "mercato": "Valute"
+  },
+  {
+   "simbolo": "EURJPY=X",
+   "nome": "EUR/JPY",
+   "mercato": "Valute"
+  },
+  {
+   "simbolo": "EURCHF=X",
+   "nome": "EUR/CHF",
+   "mercato": "Valute"
+  }
+ ],
+ "materie_prime": [
+  {
+   "simbolo": "GC=F",
+   "nome": "Oro",
+   "mercato": "Materie prime"
+  },
+  {
+   "simbolo": "SI=F",
+   "nome": "Argento",
+   "mercato": "Materie prime"
+  },
+  {
+   "simbolo": "CL=F",
+   "nome": "Petrolio WTI",
+   "mercato": "Materie prime"
+  },
+  {
+   "simbolo": "BZ=F",
+   "nome": "Petrolio Brent",
+   "mercato": "Materie prime"
+  },
+  {
+   "simbolo": "NG=F",
+   "nome": "Gas naturale",
+   "mercato": "Materie prime"
+  },
+  {
+   "simbolo": "HG=F",
+   "nome": "Rame",
+   "mercato": "Materie prime"
+  },
+  {
+   "simbolo": "PL=F",
+   "nome": "Platino",
+   "mercato": "Materie prime"
+  },
+  {
+   "simbolo": "ZW=F",
+   "nome": "Grano",
+   "mercato": "Materie prime"
+  },
+  {
+   "simbolo": "ZC=F",
+   "nome": "Mais",
+   "mercato": "Materie prime"
+  }
+ ]
+}

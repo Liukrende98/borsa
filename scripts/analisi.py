@@ -17,7 +17,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
+import requests
 import yfinance as yf
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import costi  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG = ROOT / "config.json"
@@ -88,12 +92,46 @@ def valuta(t):
         return ""
 
 
-def notizie(t, max_n):
+UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36"}
+
+
+def notizie_rss(query, max_n=4):
+    """Notizie degli ultimi 7 giorni da Google News RSS (fonte di riserva)."""
+    import xml.etree.ElementTree as ET
+    from email.utils import parsedate_to_datetime
+    from urllib.parse import urlencode
+    try:
+        url = "https://news.google.com/rss/search?" + urlencode(
+            {"q": f"{query} when:7d", "hl": "en-US", "gl": "US", "ceid": "US:en"})
+        r = requests.get(url, headers=UA, timeout=15)
+        r.raise_for_status()
+        out = []
+        for it in ET.fromstring(r.content).iter("item"):
+            titolo = (it.findtext("title") or "").strip()
+            if not titolo:
+                continue
+            fonte = (it.findtext("source") or "").strip()
+            if fonte and titolo.endswith(" - " + fonte):
+                titolo = titolo[: -len(fonte) - 3]
+            try:
+                data = parsedate_to_datetime(it.findtext("pubDate")).isoformat()
+            except Exception:
+                data = ""
+            out.append({"titolo": titolo, "url": it.findtext("link") or "", "fonte": fonte, "data": data})
+            if len(out) >= max_n:
+                break
+        return out
+    except Exception as e:
+        log(f"  notizie RSS non disponibili per {query!r}: {e}")
+        return []
+
+
+def notizie(t, max_n, query=None):
     out = []
     try:
         items = t.news or []
     except Exception:
-        return out
+        items = []
     for it in items:
         if len(out) >= max_n:
             break
@@ -109,7 +147,20 @@ def notizie(t, max_n):
         if not data and it.get("providerPublishTime"):
             data = datetime.fromtimestamp(it["providerPublishTime"], timezone.utc).isoformat()
         out.append({"titolo": titolo, "url": url, "fonte": fonte, "data": data})
+    if not out and query:
+        out = notizie_rss(query, max_n)
     return out
+
+
+def query_notizie(voce):
+    """Testo di ricerca per le news in base al tipo di strumento."""
+    nome = voce.get("nome") or voce["simbolo"]
+    m = voce.get("mercato", "")
+    if m == "Crypto":
+        return f"{nome} crypto"
+    if m in ("Valute", "Materie prime", "Indice", "ETF"):
+        return nome
+    return f'"{nome}" stock'
 
 
 def rsi(close, n=14):
@@ -248,8 +299,8 @@ Regole:
 - Distingui i fatti (dati) dalle interpretazioni.
 - Non dare ordini di acquisto/vendita né target di prezzo: descrivi il quadro, i rischi e cosa monitorare.
 - Se le notizie sono poche o generiche, non trarne conclusioni forti.
-- Scrivi in italiano, in modo concreto e sintetico.
-- Rispondi SOLO con un oggetto JSON valido: niente testo prima o dopo, niente blocchi di codice."""
+- Scrivi in italiano, in modo concreto e sintetico, con i numeri in formato italiano (virgola decimale: 7,8%).
+- Rispondi compilando lo strumento salva_analisi."""
 
 SCHEMA = """{
   "sintesi": "3-5 frasi sul quadro generale di tutti i mercati monitorati",
@@ -265,6 +316,45 @@ SCHEMA = """{
   ],
   "in_evidenza": ["massimo 3 simboli che meritano attenzione adesso"]
 }"""
+
+
+STRUMENTO = {
+    "name": "salva_analisi",
+    "description": "Salva l'analisi di mercato strutturata.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "sintesi": {"type": "string", "description": "3-5 frasi sul quadro generale"},
+            "umore": {"type": "string", "enum": ["positivo", "neutro", "negativo"]},
+            "cambiamenti": {"type": "string", "description": "Cosa è cambiato rispetto all'analisi precedente, stringa vuota se non c'è"},
+            "titoli": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "simbolo": {"type": "string"},
+                        "giudizio": {"type": "string", "enum": ["rialzista", "neutrale", "ribassista"]},
+                        "commento": {"type": "string"},
+                        "da_monitorare": {"type": "string"},
+                    },
+                    "required": ["simbolo", "giudizio", "commento", "da_monitorare"],
+                },
+            },
+            "in_evidenza": {"type": "array", "items": {"type": "string"}, "maxItems": 3},
+        },
+        "required": ["sintesi", "umore", "cambiamenti", "titoli", "in_evidenza"],
+    },
+}
+
+
+def risposta_strumento(resp):
+    """Estrae l'input dello strumento; in mancanza prova a leggere JSON dal testo."""
+    for b in resp.content:
+        if b.type == "tool_use":
+            return dict(b.input)
+    if getattr(resp, "stop_reason", "") == "max_tokens":
+        raise ValueError("risposta troncata: aumenta max_token_risposta in config.json")
+    return estrai_json("".join(b.text for b in resp.content if b.type == "text"))
 
 
 def compatta(t):
@@ -293,6 +383,9 @@ def analisi_claude(cfg, titoli, precedente):
     if not key:
         log("ANTHROPIC_API_KEY mancante: salto l'analisi AI")
         return None
+    if not costi.disponibile(cfg, 0.01):
+        log("Budget mensile API esaurito: salto l'analisi AI")
+        return None
     import anthropic
 
     ora = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -303,7 +396,7 @@ def analisi_claude(cfg, titoli, precedente):
                 f"Giudizi: {json.dumps({x['simbolo']: x.get('giudizio') for x in precedente.get('titoli', [])}, ensure_ascii=False)}\n")
     prompt = (f"Data e ora: {ora}\n{prec}\n"
               f"Dati attuali:\n{json.dumps([compatta(t) for t in titoli], ensure_ascii=False)}\n\n"
-              f"Rispondi con questo schema JSON:\n{SCHEMA}")
+              f"Contenuto atteso:\n{SCHEMA}")
 
     client = anthropic.Anthropic(api_key=key)
     for i in range(2):
@@ -313,9 +406,11 @@ def analisi_claude(cfg, titoli, precedente):
                 max_tokens=cfg.get("max_token_risposta", 4000),
                 system=SISTEMA,
                 messages=[{"role": "user", "content": prompt}],
+                tools=[STRUMENTO],
+                tool_choice={"type": "tool", "name": STRUMENTO["name"]},
             )
-            testo = "".join(b.text for b in resp.content if b.type == "text")
-            ai = estrai_json(testo)
+            costi.registra(cfg, cfg["modello"], resp.usage, "monitor")
+            ai = risposta_strumento(resp)
             ai["generata"] = ora_iso()
             ai["modello"] = cfg["modello"]
             ai["token"] = {"input": resp.usage.input_tokens, "output": resp.usage.output_tokens}
@@ -366,7 +461,7 @@ def main():
             "nome": voce.get("nome", s),
             "mercato": voce.get("mercato", ""),
             "valuta": voce.get("valuta") or valuta(t),
-            "notizie": notizie(t, cfg.get("notizie_per_titolo", 5)),
+            "notizie": notizie(t, cfg.get("notizie_per_titolo", 5), query=query_notizie(voce)),
             "dati_vecchi": False,
         })
         titoli.append(dati)
