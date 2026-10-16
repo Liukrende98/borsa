@@ -17,6 +17,7 @@ Simulazione: ingresso all'apertura successiva, senza leva, costo fisso per opera
 """
 import json
 import math
+import os
 import sys
 import time
 from datetime import date, datetime, timezone
@@ -426,9 +427,21 @@ def main():
     oggi = date.today()
     idee = carica_json(IDEE, [])
     effort = cfg_b.get("ragionamento", "high")
+    prova = os.environ.get("SENZA_AI", "").lower() == "true"
+    if prova:
+        log("MODALITÀ PROVA: nessuna chiamata a Claude, le nuove idee NON vengono registrate")
+
+    # pulizia: idee nate da run di prova (senza analisi AI) non devono finire nelle statistiche
+    prima = len(idee)
+    idee = [i for i in idee if not (
+        i.get("prova") or
+        (i.get("stato") == "aperta" and i.get("ingresso") is None and not i.get("motivazione")
+         and i.get("ai_tenuta") is not True and "2026-10-16" <= str(i.get("creata", "")) < "2026-10-16T19:00"))]
+    if len(idee) != prima:
+        log(f"Rimosse {prima - len(idee)} idee generate da run di prova")
 
     # 0. retrospettiva settimanale
-    if oggi.weekday() == cfg_b.get("giorno_retrospettiva", 4):
+    if oggi.weekday() == cfg_b.get("giorno_retrospettiva", 4) and not prova:
         lezioni = retrospettiva.esegui(cfg, idee)
     else:
         lezioni = carica_json(retrospettiva.LEZIONI, {})
@@ -607,14 +620,16 @@ def main():
             c.pop("fondamentali", None)
         c["stato"] = "aperta"
         c["creata"] = ora_iso()
-    idee.extend(finalisti)
+    if not prova:
+        idee.extend(finalisti)
     idee = idee[-cfg_b.get("registro_max", 6000):]
+    anteprima = [c for c in finalisti if c["id"] in ids_finali] if prova else []
 
     tenute = [i for i in idee if i.get("ai_tenuta") is not False]
     vista = [i for i in tenute if i.get("stato") == "aperta"] + \
             [i for i in tenute if i.get("stato") != "aperta"][-80:]
     grafici = {}
-    for i in vista:
+    for i in vista + anteprima:
         if i.get("stato") == "aperta":
             df = dati.get(i["simbolo"])
             if df is not None:
@@ -634,7 +649,9 @@ def main():
                     "critico": cfg_b.get("modello_critico") if verdetti else None},
         "regime": reg,
         "contesto": contesto,
-        "idee_oggi": sorted(ids_finali),
+        "prova": prova,
+        "anteprima": anteprima,
+        "idee_oggi": [] if prova else sorted(ids_finali),
         "universo": len(voci),
         "scaricati": len(dati),
         "per_mercato": conteggi,
