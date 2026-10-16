@@ -1,6 +1,6 @@
 {
   "modello": "claude-haiku-5-5",
-  "max_token_risposta": 4000,
+  "max_token_risposta": 6000,
   "ai_ogni_minuti": 60,
   "salta_ai_se_invariato": true,
   "storico_max": 300,
@@ -64,7 +64,7 @@
   ],
   "breve": {
     "modello": "claude-sonnet-5-5",
-    "max_token_risposta": 4000,
+    "max_token_risposta": 6000,
     "candidati_max": 12,
     "idee_max": 5,
     "rr_minimo": 1.5,
