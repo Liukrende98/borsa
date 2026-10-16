@@ -17,6 +17,9 @@ from analisi import log, risposta_strumento  # noqa: E402
 
 def chiama(cfg, modello, sistema, prompt, strumento, voce, max_tokens=16000, effort=None, stima_usd=0.5):
     """Restituisce (dati_strumento, usage) oppure (None, None)."""
+    if os.environ.get("SENZA_AI", "").lower() == "true":
+        log(f"[{voce}] modalità prova senza AI: nessuna chiamata a Claude")
+        return None, None
     if not os.environ.get("ANTHROPIC_API_KEY"):
         log(f"[{voce}] ANTHROPIC_API_KEY mancante")
         return None, None

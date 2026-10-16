@@ -95,35 +95,66 @@ def valuta(t):
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36"}
 
 
-def notizie_rss(query, max_n=4):
-    """Notizie degli ultimi 7 giorni da Google News RSS (fonte di riserva)."""
+_FONTI_KO = {}  # fonte -> fallimenti consecutivi in questo run
+
+
+def _leggi_rss(nome_fonte, url, max_n, fonte_default=""):
+    """Legge un feed RSS; dopo 2 errori consecutivi la fonte viene saltata per il resto del run."""
     import xml.etree.ElementTree as ET
     from email.utils import parsedate_to_datetime
-    from urllib.parse import urlencode
-    try:
-        url = "https://news.google.com/rss/search?" + urlencode(
-            {"q": f"{query} when:7d", "hl": "en-US", "gl": "US", "ceid": "US:en"})
-        r = requests.get(url, headers=UA, timeout=15)
-        r.raise_for_status()
-        out = []
-        for it in ET.fromstring(r.content).iter("item"):
-            titolo = (it.findtext("title") or "").strip()
-            if not titolo:
-                continue
-            fonte = (it.findtext("source") or "").strip()
-            if fonte and titolo.endswith(" - " + fonte):
-                titolo = titolo[: -len(fonte) - 3]
-            try:
-                data = parsedate_to_datetime(it.findtext("pubDate")).isoformat()
-            except Exception:
-                data = ""
-            out.append({"titolo": titolo, "url": it.findtext("link") or "", "fonte": fonte, "data": data})
-            if len(out) >= max_n:
-                break
-        return out
-    except Exception as e:
-        log(f"  notizie RSS non disponibili per {query!r}: {e}")
+    from urllib.parse import urlparse, parse_qs
+    if _FONTI_KO.get(nome_fonte, 0) >= 2:
         return []
+    try:
+        r = requests.get(url, headers=UA, timeout=8)
+        r.raise_for_status()
+        root = ET.fromstring(r.content)
+        _FONTI_KO[nome_fonte] = 0
+    except Exception as e:
+        _FONTI_KO[nome_fonte] = _FONTI_KO.get(nome_fonte, 0) + 1
+        if _FONTI_KO[nome_fonte] == 2:
+            log(f"  fonte notizie {nome_fonte} non raggiungibile ({e}): la salto per questo run")
+        return []
+    out = []
+    for it in root.iter("item"):
+        titolo = (it.findtext("title") or "").strip()
+        if not titolo:
+            continue
+        fonte = fonte_default
+        for el in it:
+            if el.tag.split("}")[-1].lower() == "source" and (el.text or "").strip():
+                fonte = el.text.strip()
+        if fonte and titolo.endswith(" - " + fonte):
+            titolo = titolo[: -len(fonte) - 3]
+        link = it.findtext("link") or ""
+        if "bing.com" in link and "url=" in link:  # link di Bing: estrae l'URL vero
+            link = parse_qs(urlparse(link).query).get("url", [link])[0]
+        try:
+            data = parsedate_to_datetime(it.findtext("pubDate")).isoformat()
+        except Exception:
+            data = ""
+        out.append({"titolo": titolo, "url": link, "fonte": fonte, "data": data})
+        if len(out) >= max_n:
+            break
+    return out
+
+
+def notizie_web(query, simbolo=None, max_n=4):
+    """Notizie recenti da fonti RSS alternative, in ordine di affidabilità dai server GitHub."""
+    from urllib.parse import urlencode, quote
+    tentativi = []
+    if simbolo:
+        tentativi.append(("Yahoo RSS", "https://feeds.finance.yahoo.com/rss/2.0/headline?"
+                          + urlencode({"s": simbolo, "region": "US", "lang": "en-US"}), "Yahoo Finance"))
+    if query:
+        tentativi.append(("Bing News", "https://www.bing.com/news/search?" + urlencode({"q": query, "format": "rss"}), ""))
+        tentativi.append(("Google News", "https://news.google.com/rss/search?"
+                          + urlencode({"q": f"{query} when:7d", "hl": "en-US", "gl": "US", "ceid": "US:en"}), ""))
+    for nome, url, predef in tentativi:
+        out = _leggi_rss(nome, url, max_n, predef)
+        if out:
+            return out
+    return []
 
 
 def notizie(t, max_n, query=None):
@@ -147,8 +178,8 @@ def notizie(t, max_n, query=None):
         if not data and it.get("providerPublishTime"):
             data = datetime.fromtimestamp(it["providerPublishTime"], timezone.utc).isoformat()
         out.append({"titolo": titolo, "url": url, "fonte": fonte, "data": data})
-    if not out and query:
-        out = notizie_rss(query, max_n)
+    if not out:
+        out = notizie_web(query, getattr(t, "ticker", None), max_n)
     return out
 
 
@@ -382,6 +413,9 @@ def analisi_claude(cfg, titoli, precedente):
     key = os.environ.get("ANTHROPIC_API_KEY")
     if not key:
         log("ANTHROPIC_API_KEY mancante: salto l'analisi AI")
+        return None
+    if os.environ.get("SENZA_AI", "").lower() == "true":
+        log("Modalità prova senza AI: nessuna chiamata a Claude")
         return None
     if not costi.disponibile(cfg, 0.01):
         log("Budget mensile API esaurito: salto l'analisi AI")
