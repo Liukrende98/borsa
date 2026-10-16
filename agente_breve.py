@@ -1,36 +1,48 @@
 #!/usr/bin/env python3
 """
-Agente breve termine (1-10 sedute).
+Agente breve termine (1-10 sedute) - versione "imbuto".
 
-Ogni sera dopo la chiusura USA:
-1. VALUTA le idee aperte nel registro con le candele nuove (target / stop / scadenza)
-2. SCANSIONA l'universo con setup a regole fisse (breakout, pullback, rimbalzi)
-3. Claude FILTRA i candidati (tiene/scarta, fiducia, motivo, rischio) senza toccare i livelli
-4. Registra TUTTE le idee, anche quelle scartate, così si misura se il filtro AI aggiunge valore
+Ogni sera feriale dopo la chiusura USA:
+0. RETROSPETTIVA (una volta a settimana): Claude rilegge le idee chiuse e scrive lezioni
+1. VALUTA le idee aperte con le candele nuove (target / stop / scadenza)
+2. SCARICA l'universo: ~2000 azioni USA, Italia, Europa, ETF, indici, crypto, valute, materie prime
+3. SCANSIONA tutto con setup a regole fisse + forza relativa, settore, regime di mercato, liquidità
+4. FILTRA i migliori: niente trimestrali dentro la finestra del trade
+5. ARRICCHISCE i finalisti: fondamentali e notizie
+6. ANALISTA (Claude, ragionamento esteso) sceglie la rosa
+7. CRITICO (Claude, modello più forte) fa l'avvocato del diavolo: restano solo le idee che reggono
+8. REGISTRA tutto, scartate comprese, per misurare se ogni filtro aggiunge valore
 
-Simulazione: ingresso all'apertura della seduta successiva, senza leva, costo fisso per trade.
+Simulazione: ingresso all'apertura successiva, senza leva, costo fisso per operazione.
 """
 import json
 import math
 import os
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import pandas as pd
 import yfinance as yf
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from analisi import num, carica_json, salva_json, ora_iso, log, rsi, notizie, risposta_strumento  # noqa: E402
+from analisi import num, carica_json, salva_json, ora_iso, log, rsi, notizie, query_notizie  # noqa: E402
+import ai  # noqa: E402
+import arricchisci  # noqa: E402
+import costi  # noqa: E402
+import retrospettiva  # noqa: E402
+import universo  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG = ROOT / "config.json"
 OUT_DIR = ROOT / "docs"
 IDEE = OUT_DIR / "idee.json"
+VISTA = OUT_DIR / "idee_vista.json"
 BREVE = OUT_DIR / "breve.json"
 
 CHIUSE = ("target", "stop", "scaduta")
+BENCHMARK = ["^GSPC", "^VIX", "^STOXX50E"] + sorted(set(universo.SETTORI_ETF.values()))
 
 
 def it(x):
@@ -48,18 +60,37 @@ def pr(x):
 
 # ------------------------------------------------------------------ dati
 
-def scarica_giornaliero(simbolo, tentativi=3):
-    for i in range(tentativi):
-        try:
-            df = yf.Ticker(simbolo).history(period="1y", interval="1d", auto_adjust=True)
-            df = df.dropna(subset=["Open", "High", "Low", "Close"])
-            if df.empty:
-                raise ValueError("nessun dato")
-            return df
-        except Exception as e:
-            log(f"  {simbolo}: tentativo {i + 1} fallito ({e})")
-            time.sleep(2 * (i + 1))
-    return None
+def scarica_tutti(simboli, blocco=100):
+    """Scarica 1 anno di candele giornaliere a blocchi; restituisce {simbolo: DataFrame}."""
+    dati = {}
+    for i in range(0, len(simboli), blocco):
+        parte = simboli[i:i + blocco]
+        df = None
+        for t in range(3):
+            try:
+                df = yf.download(parte, period="1y", interval="1d", group_by="ticker",
+                                 auto_adjust=True, threads=True, progress=False)
+                break
+            except Exception as e:
+                log(f"  blocco {i // blocco + 1}: tentativo {t + 1} fallito ({e})")
+                time.sleep(5 * (t + 1))
+        if df is None or df.empty:
+            continue
+        multi = isinstance(df.columns, pd.MultiIndex)
+        livello0 = set(df.columns.get_level_values(0)) if multi else set()
+        for s in parte:
+            try:
+                sub = df[s] if multi and s in livello0 else (df if not multi and len(parte) == 1 else None)
+                if sub is None:
+                    continue
+                sub = sub.dropna(subset=["Open", "High", "Low", "Close"])
+                if len(sub) >= 30:
+                    dati[s] = sub
+            except Exception:
+                pass
+        log(f"  scaricati {min(i + blocco, len(simboli))}/{len(simboli)} (validi {len(dati)})")
+        time.sleep(1)
+    return dati
 
 
 def atr(df, n=14):
@@ -76,6 +107,54 @@ def volume_rel(df):
         return None
     media = float(v.iloc[-21:-1].mean())
     return float(v.iloc[-1]) / media if media > 0 else None
+
+
+def var_pct(df, n):
+    if df is None or len(df) <= n:
+        return None
+    c = df["Close"]
+    return (float(c.iloc[-1]) / float(c.iloc[-1 - n]) - 1) * 100
+
+
+def scambi_medi(df):
+    """Controvalore medio giornaliero a 20 sedute (prezzo × volume)."""
+    if "Volume" not in df:
+        return None
+    x = (df["Close"] * df["Volume"].fillna(0)).tail(20).mean()
+    return float(x) if x == x else None
+
+
+def regime(dati, voci):
+    out = {}
+    spx = dati.get("^GSPC")
+    if spx is not None and len(spx) > 200:
+        c = spx["Close"]
+        out["spx_sopra_sma200"] = bool(c.iloc[-1] > c.rolling(200).mean().iloc[-1])
+        out["spx_sopra_sma50"] = bool(c.iloc[-1] > c.rolling(50).mean().iloc[-1])
+        out["spx_var_1m"] = num(var_pct(spx, 21), 2)
+    vix = dati.get("^VIX")
+    if vix is not None and len(vix):
+        out["vix"] = num(vix["Close"].iloc[-1], 1)
+
+    def ampiezza(mercati):
+        dfs = [dati[v["simbolo"]] for v in voci if v["mercato"] in mercati and v["simbolo"] in dati]
+        dfs = [d for d in dfs if len(d) >= 50]
+        if not dfs:
+            return None
+        sopra = sum(1 for d in dfs if d["Close"].iloc[-1] > d["Close"].tail(50).mean())
+        return num(sopra / len(dfs) * 100, 1)
+
+    out["ampiezza_usa"] = ampiezza(("USA",))
+    out["ampiezza_europa"] = ampiezza(("Italia", "Europa"))
+    amp = out.get("ampiezza_usa") or 50
+    if out.get("spx_sopra_sma200") and amp >= 55:
+        out["etichetta"] = "rialzista"
+    elif out.get("spx_sopra_sma200") is False and amp <= 45:
+        out["etichetta"] = "ribassista"
+    else:
+        out["etichetta"] = "incerto"
+    out["volatilita_alta"] = bool((out.get("vix") or 0) >= 25)
+    return out
 
 
 # ------------------------------------------------------------- scanner
@@ -165,6 +244,7 @@ def scansiona(voce, df, cfg_b):
     return out
 
 
+
 # ----------------------------------------------------------- valutatore
 
 def valuta(idea, df, cfg_b):
@@ -238,47 +318,44 @@ def aggrega(lista):
 def statistiche(idee):
     chiuse = [i for i in idee if i.get("stato") in CHIUSE]
     tenute = [i for i in chiuse if i.get("ai_tenuta") is not False]
-    scartate = [i for i in chiuse if i.get("ai_tenuta") is False]
-    setup = sorted({i["setup"] for i in chiuse})
+    sc_an = [i for i in chiuse if i.get("ai_tenuta") is False and i.get("fase_scarto", 1) == 1]
+    sc_cr = [i for i in chiuse if i.get("ai_tenuta") is False and i.get("fase_scarto") == 2]
+
+    def per(chiave):
+        return {k: aggrega([i for i in tenute if (i.get(chiave) or "n/d") == k])
+                for k in sorted({i.get(chiave) or "n/d" for i in tenute})}
+
     return {
         "tenute": aggrega(tenute),
-        "scartate": aggrega(scartate),
-        "per_setup": {s: aggrega([i for i in tenute if i["setup"] == s]) for s in setup},
+        "scartate": aggrega(sc_an + sc_cr),
+        "scartate_analista": aggrega(sc_an),
+        "scartate_critico": aggrega(sc_cr),
+        "per_setup": per("setup"),
+        "per_mercato": per("mercato"),
+        "per_regime": per("regime"),
         "aperte": sum(1 for i in idee if i.get("stato") == "aperta" and i.get("ai_tenuta") is not False),
     }
 
 
 # -------------------------------------------------------------------- AI
 
-SISTEMA = """Sei un trader esperto che valuta idee di breve termine (da 1 a 10 sedute) generate da uno scanner tecnico.
-Ingresso, stop e target sono calcolati dal codice: non modificarli e non inventare numeri.
-
-Per ogni candidato decidi se tenerlo o scartarlo, assegna una fiducia da 1 a 5 e spiega il motivo e il rischio principale.
-Considera:
-- coerenza con il quadro degli indici;
-- notizie recenti (trimestrali imminenti, eventi societari, notizie che spiegano il movimento);
-- correlazione tra le idee: non tenere più idee che sono di fatto la stessa scommessa;
-- le statistiche storiche dei setup, se ci sono abbastanza idee chiuse (meno di 20 = poco affidabili).
-Sii selettivo: se nessun candidato convince, scartali tutti.
-Scrivi in italiano, concreto e sintetico, con i numeri in formato italiano (virgola decimale: 7,8%). Rispondi compilando lo strumento salva_selezione."""
-
-STRUMENTO = {
+STRUMENTO_ANALISTA = {
     "name": "salva_selezione",
-    "description": "Salva la selezione delle idee di breve termine.",
+    "description": "Salva la valutazione di tutti i candidati.",
     "input_schema": {
         "type": "object",
         "properties": {
-            "commento": {"type": "string", "description": "2-4 frasi sul contesto di breve e su come hai scelto"},
+            "commento": {"type": "string", "description": "3-5 frasi: contesto di mercato e criterio di scelta"},
             "idee": {
                 "type": "array",
                 "items": {
                     "type": "object",
                     "properties": {
-                        "id": {"type": "string", "description": "Uguale all'id del candidato"},
-                        "tenere": {"type": "boolean"},
+                        "id": {"type": "string"},
+                        "tenere": {"type": "boolean", "description": "true = passa al comitato"},
                         "fiducia": {"type": "integer", "minimum": 1, "maximum": 5},
-                        "motivazione": {"type": "string"},
-                        "rischio": {"type": "string"},
+                        "motivazione": {"type": "string", "description": "1-3 frasi: la tesi"},
+                        "rischio": {"type": "string", "description": "1 frase: il rischio principale"},
                     },
                     "required": ["id", "tenere", "fiducia", "motivazione", "rischio"],
                 },
@@ -288,42 +365,58 @@ STRUMENTO = {
     },
 }
 
+SISTEMA_ANALISTA = """Sei un trader professionista di breve termine (1-10 sedute) su azioni USA ed europee, ETF, indici, crypto, valute e materie prime.
+Uno scanner quantitativo ha già esaminato migliaia di strumenti e ti passa i finalisti con indicatori, forza relativa, settore, fondamentali, notizie e regime di mercato.
+Ingresso, stop e target sono calcolati dal codice: non modificarli e non inventare numeri.
 
-def filtro_claude(cfg_b, candidati, contesto, stats):
-    key = os.environ.get("ANTHROPIC_API_KEY")
-    if not key or not candidati:
-        if not key:
-            log("ANTHROPIC_API_KEY mancante: niente filtro AI")
-        return None
-    import anthropic
+Come valutare:
+- Allineamento: il trade va nella direzione del regime, del settore e della forza relativa? Un long su un titolo debole in un settore debole in un mercato ribassista è da scartare.
+- Qualità del setup: volumi, posizione rispetto alle medie, distanza dai massimi/minimi, volatilità (ATR) in rapporto allo stop.
+- Catalizzatori e rischi nelle notizie: un movimento spiegato da una notizia forte vale più di uno casuale; notizie negative contro un long sono un campanello d'allarme.
+- Fondamentali come filtro: evita long su società in forte deterioramento, evita short su titoli con short interest altissimo (rischio squeeze).
+- Diversificazione: non tenere più idee che sono la stessa scommessa (stesso settore, stessa direzione, stesso fattore).
+- Lezioni e statistiche storiche: applicale se poggiano su abbastanza casi.
+Sii selettivo: meglio zero idee che idee mediocri.
+Italiano, numeri con la virgola decimale. Rispondi compilando lo strumento salva_selezione con TUTTI i candidati."""
 
-    dati = [{k: c[k] for k in ("id", "simbolo", "nome", "mercato", "direzione", "setup", "motivo",
-                               "prezzo_segnale", "stop", "target", "rr", "rischio_pct", "contesto")}
-            | {"notizie": [f'{n["data"][:10]} {n["fonte"]}: {n["titolo"]}' for n in c.get("notizie", [])]}
-            for c in candidati]
-    prompt = (f"Indici:\n{json.dumps(contesto, ensure_ascii=False)}\n\n"
-              f"Statistiche storiche (idee chiuse):\n{json.dumps(stats, ensure_ascii=False)}\n\n"
-              f"Candidati di oggi:\n{json.dumps(dati, ensure_ascii=False)}\n\n"
-              f"Tieni al massimo {cfg_b.get('idee_max', 5)} idee. Valuta tutti i candidati.")
+STRUMENTO_CRITICO = {
+    "name": "salva_verdetto",
+    "description": "Salva il verdetto finale su ciascuna idea.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "commento": {"type": "string", "description": "2-3 frasi sul giudizio complessivo"},
+            "verdetti": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "string"},
+                        "conferma": {"type": "boolean"},
+                        "critica": {"type": "string", "description": "1-3 frasi: il miglior argomento contro, e perché regge o no"},
+                        "fiducia_finale": {"type": "integer", "minimum": 1, "maximum": 5},
+                    },
+                    "required": ["id", "conferma", "critica", "fiducia_finale"],
+                },
+            },
+        },
+        "required": ["commento", "verdetti"],
+    },
+}
 
-    client = anthropic.Anthropic(api_key=key)
-    for i in range(2):
-        try:
-            resp = client.messages.create(
-                model=cfg_b.get("modello", "claude-sonnet-5-5"),
-                max_tokens=cfg_b.get("max_token_risposta", 4000),
-                system=SISTEMA,
-                messages=[{"role": "user", "content": prompt}],
-                tools=[STRUMENTO],
-                tool_choice={"type": "tool", "name": STRUMENTO["name"]},
-            )
-            ai = risposta_strumento(resp)
-            ai["token"] = {"input": resp.usage.input_tokens, "output": resp.usage.output_tokens}
-            return ai
-        except Exception as e:
-            log(f"Filtro AI fallito (tentativo {i + 1}): {e}")
-            time.sleep(5)
-    return None
+SISTEMA_CRITICO = """Sei l'avvocato del diavolo di un comitato di trading. Un analista ha proposto alcune idee di breve termine (1-10 sedute).
+Per ciascuna cerca attivamente i motivi concreti per cui fallirà: regime contrario, settore debole, notizie trascurate, stop troppo stretto rispetto alla volatilità, movimento già esaurito, correlazione con altre idee, eventi in arrivo, rischio di gap.
+Conferma un'idea solo se regge al tuo miglior argomento contro; altrimenti bocciala. Puoi abbassare o alzare la fiducia.
+Usa solo i dati forniti, non inventare numeri. Italiano, virgola decimale. Rispondi compilando lo strumento salva_verdetto."""
+
+
+def compatta(c, completo=True):
+    d = {k: c.get(k) for k in ("id", "simbolo", "nome", "mercato", "settore", "direzione", "setup", "motivo",
+                               "prezzo_segnale", "stop", "target", "rr", "rischio_pct", "contesto", "trimestrale")}
+    if completo:
+        d["fondamentali"] = c.get("fondamentali") or {}
+        d["notizie"] = [f'{(n.get("data") or "")[:10]} {n.get("fonte", "")}: {n["titolo"]}' for n in c.get("notizie", [])]
+    return d
 
 
 # ------------------------------------------------------------------- main
@@ -331,109 +424,248 @@ def filtro_claude(cfg_b, candidati, contesto, stats):
 def main():
     cfg = carica_json(CONFIG, {})
     cfg_b = cfg.get("breve") or {}
-    universo = cfg_b.get("universo") or []
-    if not universo:
-        log("config.json: sezione breve.universo mancante")
-        sys.exit(1)
-
+    oggi = date.today()
     idee = carica_json(IDEE, [])
-    dati = {}
-    for voce in universo:
-        log(f"Scarico {voce['simbolo']}")
-        dati[voce["simbolo"]] = scarica_giornaliero(voce["simbolo"])
+    effort = cfg_b.get("ragionamento", "high")
+    prova = os.environ.get("SENZA_AI", "").lower() == "true"
+    if prova:
+        log("MODALITÀ PROVA: nessuna chiamata a Claude, le nuove idee NON vengono registrate")
 
-    # 1. valutazione delle idee aperte
-    for idea in idee:
-        if idea.get("stato") != "aperta":
-            continue
-        s = idea["simbolo"]
-        if s not in dati:
-            dati[s] = scarica_giornaliero(s)
-        valuta(idea, dati[s], cfg_b)
+    # pulizia: idee nate da run di prova (senza analisi AI) non devono finire nelle statistiche
+    prima = len(idee)
+    idee = [i for i in idee if not (
+        i.get("prova") or
+        (i.get("stato") == "aperta" and i.get("ingresso") is None and not i.get("motivazione")
+         and i.get("ai_tenuta") is not True and "2026-10-16" <= str(i.get("creata", "")) < "2026-10-16T19:00"))]
+    if len(idee) != prima:
+        log(f"Rimosse {prima - len(idee)} idee generate da run di prova")
 
-    # 2. scansione
-    aperti = {i["simbolo"] for i in idee if i.get("stato") == "aperta"}
+    # 0. retrospettiva settimanale
+    if oggi.weekday() == cfg_b.get("giorno_retrospettiva", 4) and not prova:
+        lezioni = retrospettiva.esegui(cfg, idee)
+    else:
+        lezioni = carica_json(retrospettiva.LEZIONI, {})
+
+    # 1-2. universo e dati
+    voci = universo.costruisci(cfg_b)
+    per_simbolo = {v["simbolo"]: v for v in voci}
+    aperte = [i for i in idee if i.get("stato") == "aperta"]
+    simboli = list(dict.fromkeys([v["simbolo"] for v in voci] + BENCHMARK + [i["simbolo"] for i in aperte]))
+    log(f"Scarico {len(simboli)} strumenti")
+    dati = scarica_tutti(simboli, cfg_b.get("blocco_download", 100))
+    log(f"Dati validi: {len(dati)}/{len(simboli)}")
+
+    # valutazione idee aperte
+    for idea in aperte:
+        valuta(idea, dati.get(idea["simbolo"]), cfg_b)
+
+    reg = regime(dati, voci)
+    log(f"Regime: {reg}")
+
+    # 3. scansione
+    occupati = {i["simbolo"] for i in idee if i.get("stato") == "aperta"}
     gia_visti = {i["id"] for i in idee}
-    candidati = []
-    for voce in universo:
-        if voce["simbolo"] in aperti:
+    var63 = {s: var_pct(dati.get(s), 63) for s in BENCHMARK}
+    candidati, scartati_liquidita = [], 0
+    for v in voci:
+        s = v["simbolo"]
+        df = dati.get(s)
+        if df is None or s in occupati:
             continue
+        m = v["mercato"]
+        if m in ("USA", "ETF", "Italia", "Europa"):
+            soglia = cfg_b.get("liquidita_min_usd", 5e6) if m in ("USA", "ETF") else cfg_b.get("liquidita_min_eur", 2e6)
+            sm = scambi_medi(df)
+            if sm is not None and sm < soglia:
+                scartati_liquidita += 1
+                continue
         try:
-            for c in scansiona(voce, dati.get(voce["simbolo"]), cfg_b):
-                if c["id"] not in gia_visti:
-                    candidati.append(c)
+            trovati = scansiona(v, df, cfg_b)
         except Exception as e:
-            log(f"  {voce['simbolo']}: errore nello scanner ({e})")
+            log(f"  {s}: errore nello scanner ({e})")
+            continue
+        if not trovati:
+            continue
+        bench = "^GSPC" if m in ("USA", "ETF") else "^STOXX50E" if m in ("Italia", "Europa") else None
+        v63 = var_pct(df, 63)
+        rs = (v63 - var63[bench]) if bench and v63 is not None and var63.get(bench) is not None else None
+        etf = universo.SETTORI_ETF.get(v.get("settore", "")) if m == "USA" else None
+        rs_sett = (var63[etf] - var63["^GSPC"]) if etf and var63.get(etf) is not None and var63.get("^GSPC") is not None else None
+        for c in trovati:
+            if c["id"] in gia_visti:
+                continue
+            d = 1 if c["direzione"] == "long" else -1
+            bonus = 0.0
+            if rs is not None:
+                bonus += max(-1.0, min(1.0, d * rs / 10))
+            if rs_sett is not None:
+                bonus += max(-0.5, min(0.5, d * rs_sett / 10))
+            if reg["etichetta"] == "rialzista":
+                bonus += 0.5 * d
+            elif reg["etichetta"] == "ribassista":
+                bonus -= 0.5 * d
+            c["punteggio"] = num(c["punteggio"] + bonus, 2)
+            c["settore"] = v.get("settore", "")
+            c["regime"] = reg["etichetta"]
+            c["contesto"]["forza_relativa_3m"] = num(rs, 2)
+            c["contesto"]["forza_settore_3m"] = num(rs_sett, 2)
+            candidati.append(c)
     candidati.sort(key=lambda c: c["punteggio"], reverse=True)
-    candidati = candidati[:cfg_b.get("candidati_max", 12)]
-    log(f"Candidati: {len(candidati)}")
+    trovati_tot = len(candidati)
+    log(f"Candidati dallo scanner: {trovati_tot} (esclusi per liquidità: {scartati_liquidita})")
 
-    for c in candidati:
+    # 4. filtro trimestrali sui migliori
+    finalisti, esclusi_trim = [], 0
+    finestra = int(cfg_b.get("giorni_max", 10) * 1.5)
+    for c in candidati[:cfg_b.get("candidati_scan", 60)]:
+        if c["mercato"] in arricchisci.AZIONI:
+            t = arricchisci.prossima_trimestrale(c["simbolo"])
+            if t and (t - oggi).days <= finestra:
+                esclusi_trim += 1
+                continue
+            c["trimestrale"] = t.isoformat() if t else None
+        finalisti.append(c)
+        if len(finalisti) >= cfg_b.get("candidati_max", 30):
+            break
+    log(f"Finalisti: {len(finalisti)} (esclusi per trimestrale vicina: {esclusi_trim})")
+
+    # 5. arricchimento
+    for c in finalisti:
+        v = per_simbolo.get(c["simbolo"], c)
+        if c["mercato"] in arricchisci.AZIONI:
+            c["fondamentali"] = arricchisci.fondamentali(c["simbolo"])
+            if not c.get("settore"):
+                c["settore"] = c["fondamentali"].get("settore", "")
         try:
-            c["notizie"] = notizie(yf.Ticker(c["simbolo"]), 3)
+            c["notizie"] = notizie(yf.Ticker(c["simbolo"]), 4, query=query_notizie(v))
         except Exception:
             c["notizie"] = []
 
     # contesto indici
     contesto = []
-    for voce in universo:
-        df = dati.get(voce["simbolo"])
-        if voce.get("mercato") != "Indice" or df is None or len(df) < 22:
+    for v in voci:
+        df = dati.get(v["simbolo"])
+        if v["mercato"] != "Indice" or df is None or len(df) < 60:
             continue
         cl = df["Close"]
-        contesto.append({
-            "nome": voce["nome"],
-            "var_1g": num((cl.iloc[-1] / cl.iloc[-2] - 1) * 100, 2),
-            "var_5g": num((cl.iloc[-1] / cl.iloc[-6] - 1) * 100, 2),
-            "sopra_sma50": bool(cl.iloc[-1] > cl.rolling(50).mean().iloc[-1]),
-        })
+        contesto.append({"nome": v["nome"], "var_1g": num(var_pct(df, 1), 2), "var_5g": num(var_pct(df, 5), 2),
+                         "var_1m": num(var_pct(df, 21), 2), "sopra_sma50": bool(cl.iloc[-1] > cl.tail(50).mean())})
 
-    # 3. filtro AI
     stats_prima = statistiche(idee)
-    ai = filtro_claude(cfg_b, candidati, contesto, stats_prima)
-    giudizi = {g["id"]: g for g in (ai or {}).get("idee", []) if "id" in g}
-    tenute_ok = 0
-    for i, c in enumerate(candidati):
+    base = (f"Data: {oggi.isoformat()}\n"
+            f"Regime di mercato: {json.dumps(reg, ensure_ascii=False)}\n"
+            f"Indici: {json.dumps(contesto, ensure_ascii=False)}\n"
+            f"Lezioni dalla retrospettiva: {json.dumps(lezioni.get('lezioni', []), ensure_ascii=False)}\n"
+            f"Statistiche storiche (idee chiuse): {json.dumps({k: stats_prima[k] for k in ('tenute', 'scartate_analista', 'scartate_critico', 'per_setup', 'per_regime')}, ensure_ascii=False)}\n")
+
+    # 6. analista
+    shortlist_max = cfg_b.get("shortlist_max", 8)
+    idee_max = cfg_b.get("idee_max", 5)
+    sel, commento, commento_critico = None, "", ""
+    if finalisti:
+        prompt = (base + f"\nCandidati ({len(finalisti)}):\n{json.dumps([compatta(c) for c in finalisti], ensure_ascii=False)}\n\n"
+                  f"Valuta tutti i candidati. Manda al comitato (tenere=true) al massimo {shortlist_max} idee.")
+        sel, _ = ai.chiama(cfg, cfg_b.get("modello_analista", "claude-sonnet-5-5"), SISTEMA_ANALISTA, prompt,
+                           STRUMENTO_ANALISTA, "analista", max_tokens=32000, effort=effort, stima_usd=0.6)
+    giudizi = {g["id"]: g for g in (sel or {}).get("idee", []) if isinstance(g, dict) and "id" in g}
+    commento = (sel or {}).get("commento", "")
+
+    for c in finalisti:
         g = giudizi.get(c["id"])
-        if ai is None:
-            # senza AI: tiene le migliori per punteggio
-            c["ai_tenuta"] = None if i < cfg_b.get("idee_max", 5) else False
-        else:
-            tieni = bool(g and g.get("tenere")) and tenute_ok < cfg_b.get("idee_max", 5)
-            c["ai_tenuta"] = tieni
-            tenute_ok += tieni
+        if g:
+            c.update({"fiducia": g.get("fiducia"), "motivazione": g.get("motivazione", ""), "rischio": g.get("rischio", "")})
+    if sel:
+        rosa = sorted([c for c in finalisti if giudizi.get(c["id"], {}).get("tenere")],
+                      key=lambda c: c.get("fiducia") or 0, reverse=True)[:shortlist_max]
+    else:
+        rosa = finalisti[:idee_max]
+    ids_rosa = {c["id"] for c in rosa}
+
+    # 7. critico
+    verdetti = None
+    if sel and rosa:
+        prompt = (base + f"\nIdee proposte dall'analista ({len(rosa)}):\n"
+                  f"{json.dumps([compatta(c) | {'tesi_analista': c.get('motivazione'), 'rischio_analista': c.get('rischio'), 'fiducia_analista': c.get('fiducia')} for c in rosa], ensure_ascii=False)}\n\n"
+                  f"Commento dell'analista: {commento}\n"
+                  f"Alla fine possono restare al massimo {idee_max} idee.")
+        verdetti, _ = ai.chiama(cfg, cfg_b.get("modello_critico", "claude-opus-5-5"), SISTEMA_CRITICO, prompt,
+                                STRUMENTO_CRITICO, "critico", max_tokens=24000, effort=effort, stima_usd=0.5)
+    ver = {g["id"]: g for g in (verdetti or {}).get("verdetti", []) if isinstance(g, dict) and "id" in g}
+    commento_critico = (verdetti or {}).get("commento", "")
+
+    if verdetti:
+        for c in rosa:
+            g = ver.get(c["id"])
             if g:
-                c["fiducia"] = g.get("fiducia")
-                c["motivazione"] = g.get("motivazione", "")
-                c["rischio"] = g.get("rischio", "")
+                c["critica"] = g.get("critica", "")
+                c["fiducia_analista"] = c.get("fiducia")
+                c["fiducia"] = g.get("fiducia_finale", c.get("fiducia"))
+        finali = sorted([c for c in rosa if ver.get(c["id"], {}).get("conferma")],
+                        key=lambda c: c.get("fiducia") or 0, reverse=True)[:idee_max]
+    else:
+        finali = rosa[:idee_max]
+        if sel and rosa:
+            commento_critico = "Critico non disponibile: restano le idee migliori dell'analista."
+    ids_finali = {c["id"] for c in finali}
+
+    # 8. registrazione (tutti i finalisti, scartati compresi)
+    for c in finalisti:
+        if not sel:
+            c["ai_tenuta"] = None if c["id"] in ids_finali else False
+        else:
+            c["ai_tenuta"] = c["id"] in ids_finali
+        if c["ai_tenuta"] is False:
+            c["fase_scarto"] = 2 if c["id"] in ids_rosa else 1
+            c.pop("notizie", None)
+            c.pop("fondamentali", None)
         c["stato"] = "aperta"
         c["creata"] = ora_iso()
+    if not prova:
+        idee.extend(finalisti)
+    idee = idee[-cfg_b.get("registro_max", 6000):]
+    anteprima = [c for c in finalisti if c["id"] in ids_finali] if prova else []
 
-    idee.extend(candidati)
-    idee = idee[-3000:]
-
-    # grafici per le idee tenute di oggi e per quelle ancora aperte
+    tenute = [i for i in idee if i.get("ai_tenuta") is not False]
+    vista = [i for i in tenute if i.get("stato") == "aperta"] + \
+            [i for i in tenute if i.get("stato") != "aperta"][-80:]
     grafici = {}
-    for i in idee:
-        if i.get("stato") == "aperta" and i.get("ai_tenuta") is not False:
+    for i in vista + anteprima:
+        if i.get("stato") == "aperta":
             df = dati.get(i["simbolo"])
             if df is not None:
-                grafici[i["simbolo"]] = [[d.strftime("%Y-%m-%d"), pr(v)] for d, v in df["Close"].tail(60).items()]
+                grafici[i["simbolo"]] = [[d.strftime("%Y-%m-%d"), pr(x)] for d, x in df["Close"].tail(60).items()]
+
+    conteggi = {}
+    for v in voci:
+        conteggi[v["mercato"]] = conteggi.get(v["mercato"], 0) + 1
 
     salva_json(IDEE, idee)
+    salva_json(VISTA, vista)
     salva_json(BREVE, {
         "generato": ora_iso(),
-        "commento": (ai or {}).get("commento", ""),
-        "modello": cfg_b.get("modello") if ai else None,
-        "token": (ai or {}).get("token"),
+        "commento": commento,
+        "commento_critico": commento_critico,
+        "modelli": {"analista": cfg_b.get("modello_analista") if sel else None,
+                    "critico": cfg_b.get("modello_critico") if verdetti else None},
+        "regime": reg,
         "contesto": contesto,
-        "idee_oggi": [c["id"] for c in candidati if c["ai_tenuta"] is not False],
-        "candidati": len(candidati),
-        "universo": len(universo),
+        "prova": prova,
+        "anteprima": anteprima,
+        "idee_oggi": [] if prova else sorted(ids_finali),
+        "universo": len(voci),
+        "scaricati": len(dati),
+        "per_mercato": conteggi,
+        "candidati": trovati_tot,
+        "esclusi_liquidita": scartati_liquidita,
+        "esclusi_trimestrale": esclusi_trim,
+        "analizzati": len(finalisti),
+        "rosa": len(rosa),
         "grafici": grafici,
         "statistiche": statistiche(idee),
+        "costi": costi.carica(),
     })
-    log(f"Fatto: {len(candidati)} candidati, {sum(1 for c in candidati if c['ai_tenuta'] is not False)} idee tenute")
+    log(f"Fatto: {trovati_tot} candidati, {len(finalisti)} analizzati, {len(rosa)} in rosa, {len(finali)} idee finali. "
+        f"Spesa API del mese: {costi.carica()['totale_usd']:.2f} $")
 
 
 if __name__ == "__main__":

@@ -176,6 +176,24 @@ dialog .azioni{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
 }
 .toast[hidden]{display:none}
 
+/* imbuto, regime, critico, lezioni */
+.avviso-prova{margin:12px 0;padding:10px 14px;border-radius:10px;background:var(--neu-bg);border-left:4px solid var(--warn);font-size:14px;max-width:72ch}
+.critico-breve{margin:0 0 10px;font-size:15px;color:var(--muted);max-width:66ch}
+.critico-breve b{color:var(--ink)}
+.imbuto{list-style:none;padding:0;margin:14px 0 8px;display:flex;flex-wrap:wrap;gap:6px}
+.imbuto li{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:13px;color:var(--muted)}
+.imbuto li b{color:var(--ink);font-size:15px;margin-right:3px}
+.regime{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:14px;margin:0 0 14px;padding:10px 14px;border-radius:10px;background:var(--neu-bg)}
+.regime span{color:var(--muted)}
+.regime-rialzista{background:var(--up-bg)} .regime-rialzista b{color:var(--up)}
+.regime-ribassista{background:var(--down-bg)} .regime-ribassista b{color:var(--down)}
+.idea .critica{font-size:13px;color:var(--muted);border-left:3px solid var(--warn);padding-left:9px}
+.idea .critica b{color:var(--ink)}
+.lezioni{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 20px}
+.lezioni p{margin:0 0 10px;max-width:70ch}
+.lezioni ul{margin:0 0 12px;padding-left:20px;display:grid;gap:6px;max-width:72ch}
+.lezioni h3{font-size:13px;color:var(--muted);margin:14px 0 6px}
+
 /* viste */
 .viste{display:flex;gap:4px;margin-top:12px}
 .viste button{border:0;background:transparent;font-weight:700;font-size:15px;padding:6px 2px;margin-right:16px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;border-radius:0}
@@ -281,7 +299,7 @@ const AUTO_REFRESH_MS = 5 * 60 * 1000;
 let imp = {};
 try { imp = JSON.parse(localStorage.getItem(CHIAVE) || "{}") || {}; } catch (e) { imp = {}; }
 
-let dati = null, storico = [], idee = [], breve = null, filtro = "Tutti", aperto = null;
+let dati = null, storico = [], idee = [], breve = null, lezioni = null, spesa = null, filtro = "Tutti", aperto = null;
 let vista = imp.vista === "breve" ? "breve" : "mercato";
 const periodoPer = {};
 
@@ -345,13 +363,15 @@ async function carica(silenzioso) {
   const btn = $("#btnAggiorna");
   btn.disabled = true;
   try {
-    const [d, s, i, b] = await Promise.all([
+    const [d, s, i, b, l, c] = await Promise.all([
       caricaFile("data.json").catch(e => { if (vista === "mercato") throw e; return null; }),
       caricaFile("storico.json").catch(() => []),
-      caricaFile("idee.json").catch(() => []),
-      caricaFile("breve.json").catch(() => null)
+      caricaFile("idee_vista.json").catch(() => caricaFile("idee.json")).catch(() => []),
+      caricaFile("breve.json").catch(() => null),
+      caricaFile("lezioni.json").catch(() => null),
+      caricaFile("costi.json").catch(() => null)
     ]);
-    dati = d; storico = Array.isArray(s) ? s : []; idee = Array.isArray(i) ? i : []; breve = b;
+    dati = d; storico = Array.isArray(s) ? s : []; idee = Array.isArray(i) ? i : []; breve = b; lezioni = l; spesa = c;
     render();
   } catch (e) {
     if (!dati && !breve) renderVuoto(e.message);
@@ -659,10 +679,32 @@ function renderBreve() {
 
   let h = "";
   if (breve.commento) h += `<p class="commento-breve">${esc(breve.commento)}</p>`;
-  h += `<p class="meta-breve"><span>${breve.universo} strumenti scansionati</span><span>${breve.candidati} candidati</span><span>${(breve.idee_oggi || []).length} idee tenute</span>${breve.modello ? `<span>${esc(breve.modello)}</span>` : ""}</p>`;
+  if (breve.commento_critico) h += `<p class="critico-breve"><b>Il critico.</b> ${esc(breve.commento_critico)}</p>`;
+  const passi = (breve.prova
+    ? [[breve.scaricati ?? breve.universo, "strumenti analizzati"], [breve.candidati, "segnali tecnici"],
+       [breve.analizzati, "approfonditi"], [(breve.anteprima || []).length, "migliori per punteggio (senza AI)"]]
+    : [[breve.scaricati ?? breve.universo, "strumenti analizzati"], [breve.candidati, "segnali tecnici"],
+       [breve.analizzati, "approfonditi"], [breve.rosa, "proposti dall'analista"], [(breve.idee_oggi || []).length, "confermati"]])
+    .filter(p => p[0] != null);
+  if (breve.prova) h += `<p class="avviso-prova"><b>Run di prova senza AI.</b> Claude non è stato chiamato e le idee qui sotto non sono registrate: servono solo a verificare che dati e filtri funzionino.</p>`;
+  h += `<ol class="imbuto">${passi.map(p => `<li><b>${fmtNum(p[0], 0)}</b> ${p[1]}</li>`).join("")}</ol>`;
+  const esclusi = [breve.esclusi_trimestrale ? `${breve.esclusi_trimestrale} esclusi per trimestrale vicina` : "",
+    breve.esclusi_liquidita ? `${breve.esclusi_liquidita} poco liquidi` : ""].filter(Boolean);
+  const m = breve.modelli || {};
+  const sp = spesa || breve.costi;
+  h += `<p class="meta-breve">${esclusi.map(e => `<span>${esc(e)}</span>`).join("")}
+    ${m.analista ? `<span>Analista: ${esc(m.analista)}</span>` : ""}${m.critico ? `<span>Critico: ${esc(m.critico)}</span>` : ""}
+    ${sp ? `<span>Spesa API del mese: ${fmtNum(sp.totale_usd, 2)} $ su ${fmtNum(sp.budget_usd ?? 20, 0)} $</span>` : ""}</p>`;
+  const r = breve.regime;
+  if (r && r.etichetta) h += `<p class="regime regime-${esc(r.etichetta)}"><b>Regime ${esc(r.etichetta)}</b>${r.volatilita_alta ? " con volatilità alta" : ""}
+    ${r.vix != null ? `<span>VIX ${fmtNum(r.vix, 1)}</span>` : ""}
+    ${r.ampiezza_usa != null ? `<span>${fmtNum(r.ampiezza_usa, 0)}% azioni USA sopra la media a 50 gg</span>` : ""}
+    ${r.ampiezza_europa != null ? `<span>Europa ${fmtNum(r.ampiezza_europa, 0)}%</span>` : ""}</p>`;
   if ((breve.contesto || []).length)
     h += `<div class="indici">${breve.contesto.map(c => `<div><span>${esc(c.nome)}</span> <b class="${clsVar(c.var_1g)}">${fmtPct(c.var_1g)}</b> <span>5 gg</span> <b class="${clsVar(c.var_5g)}">${fmtPct(c.var_5g)}</b></div>`).join("")}</div>`;
 
+  if (breve.prova && (breve.anteprima || []).length)
+    h += `<h2 class="sez">Anteprima della prova (non registrate)</h2><div class="idee">${breve.anteprima.map(cartaIdea).join("")}</div>`;
   h += `<h2 class="sez">Idee da valutare</h2>`;
   h += oggi.length ? `<div class="idee">${oggi.map(cartaIdea).join("")}</div>`
     : `<p style="color:var(--muted)">Nessuna idea nuova: anche non operare è una scelta.</p>`;
@@ -670,6 +712,13 @@ function renderBreve() {
   if (aperte.length) h += `<h2 class="sez">In corso</h2><div class="idee">${aperte.map(cartaIdea).join("")}</div>`;
 
   h += `<h2 class="sez">Come stanno andando</h2>${tabellaStatistiche(breve.statistiche)}`;
+  if (lezioni && (lezioni.lezioni || []).length) {
+    h += `<h2 class="sez">Cosa ha imparato</h2><div class="lezioni">
+      <p>${esc(lezioni.sintesi || "")}</p>
+      <ul>${lezioni.lezioni.map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+      ${(lezioni.proposte || []).length ? `<h3>Modifiche proposte (le decidi tu, in config.json)</h3><ul>${lezioni.proposte.map(x => `<li><b>${esc(x.modifica)}</b>. ${esc(x.motivo)}</li>`).join("")}</ul>` : ""}
+      <p class="nota">Retrospettiva del ${esc(fmtData(lezioni.generato))} su ${lezioni.basata_su} idee chiuse. Le lezioni vengono passate all'analista ogni sera.</p></div>`;
+  }
 
   if (chiuse.length) {
     h += `<h2 class="sez">Idee chiuse</h2><div class="tab-wrap"><table class="tab"><thead><tr>
@@ -695,7 +744,7 @@ function cartaIdea(i) {
     ? `In corso da ${i.sedute} sedute: <b class="${clsVar(i.rendimento_corrente_pct)}">${fmtPct(i.rendimento_corrente_pct)}</b>`
     : `Segnale del ${esc(fmtData(i.data_segnale))}, ingresso all'apertura successiva`;
   return `<article class="idea">
-    <div class="idea-testa"><div><div class="nome">${esc(i.nome)}</div><div class="sim">${esc(i.simbolo)} · ${esc(i.setup)}</div></div>
+    <div class="idea-testa"><div><div class="nome">${esc(i.nome)}</div><div class="sim">${esc(i.simbolo)} · ${esc(i.setup)}${i.settore ? ` · ${esc(i.settore)}` : ""}</div></div>
       <span class="dir ${esc(i.direzione)}">${d > 0 ? "Long" : "Short"}</span></div>
     ${graficoIdea(i)}
     <dl class="livelli">
@@ -707,6 +756,7 @@ function cartaIdea(i) {
     <p>${esc(i.motivazione || i.motivo)}</p>
     ${i.motivazione ? `<p class="rischio">${esc(i.motivo)}</p>` : ""}
     ${i.rischio ? `<p class="rischio">Rischio: ${esc(i.rischio)}</p>` : ""}
+    ${i.critica ? `<p class="critica"><b>Critico:</b> ${esc(i.critica)}</p>` : ""}
     <div class="idea-piede"><span>${stato}</span>${fid ? `<span class="fiducia" title="Fiducia ${i.fiducia} su 5">${fid}</span>` : ""}</div>
   </article>`;
 }
@@ -738,10 +788,12 @@ function tabellaStatistiche(s) {
   let h = `<div class="tab-wrap"><table class="tab"><thead><tr><th></th><th>Chiuse</th><th>Vincenti</th><th>Rend. medio</th><th>R medio</th><th>R totale</th></tr></thead><tbody>`;
   h += riga("Tenute da Claude", s.tenute);
   Object.entries(s.per_setup || {}).forEach(([k, a]) => { h += riga(k, a, "sotto"); });
-  if (s.scartate && s.scartate.n) h += riga("Scartate da Claude (simulate)", s.scartate);
+  if (s.scartate_analista && s.scartate_analista.n) h += riga("Scartate dall'analista (simulate)", s.scartate_analista);
+  if (s.scartate_critico && s.scartate_critico.n) h += riga("Bocciate dal critico (simulate)", s.scartate_critico);
+  if (!s.scartate_analista && s.scartate && s.scartate.n) h += riga("Scartate da Claude (simulate)", s.scartate);
   h += `</tbody></table></div>`;
   if (s.tenute.n < 30) h += `<p class="avviso">Solo ${s.tenute.n} idee chiuse: servono almeno 30-50 operazioni prima che questi numeri dicano qualcosa.</p>`;
-  h += `<p class="nota" style="margin-top:8px">R = guadagno o perdita in multipli del rischio iniziale (−1 = stop pieno). Un R medio stabilmente sopra zero, e migliore per le idee tenute rispetto alle scartate, è il segnale che il sistema funziona.</p>`;
+  h += `<p class="nota" style="margin-top:8px">R = guadagno o perdita in multipli del rischio iniziale (−1 = stop pieno). Il sistema funziona se l'R medio delle tenute resta sopra zero e sopra quello delle scartate e delle bocciate: vuol dire che ogni filtro aggiunge valore.</p>`;
   return h;
 }
 
