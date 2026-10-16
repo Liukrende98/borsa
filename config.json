@@ -1,0 +1,286 @@
+{
+  "modello": "claude-haiku-5-5",
+  "max_token_risposta": 4000,
+  "ai_ogni_minuti": 60,
+  "salta_ai_se_invariato": true,
+  "storico_max": 300,
+  "notizie_per_titolo": 5,
+  "titoli": [
+    {
+      "simbolo": "FTSEMIB.MI",
+      "nome": "FTSE MIB",
+      "mercato": "Indice"
+    },
+    {
+      "simbolo": "^GSPC",
+      "nome": "S&P 500",
+      "mercato": "Indice"
+    },
+    {
+      "simbolo": "^IXIC",
+      "nome": "Nasdaq Composite",
+      "mercato": "Indice"
+    },
+    {
+      "simbolo": "ENI.MI",
+      "nome": "Eni",
+      "mercato": "Italia"
+    },
+    {
+      "simbolo": "ISP.MI",
+      "nome": "Intesa Sanpaolo",
+      "mercato": "Italia"
+    },
+    {
+      "simbolo": "RACE.MI",
+      "nome": "Ferrari",
+      "mercato": "Italia"
+    },
+    {
+      "simbolo": "AAPL",
+      "nome": "Apple",
+      "mercato": "USA"
+    },
+    {
+      "simbolo": "NVDA",
+      "nome": "NVIDIA",
+      "mercato": "USA"
+    },
+    {
+      "simbolo": "MSFT",
+      "nome": "Microsoft",
+      "mercato": "USA"
+    },
+    {
+      "simbolo": "BTC-USD",
+      "nome": "Bitcoin",
+      "mercato": "Crypto"
+    },
+    {
+      "simbolo": "ETH-USD",
+      "nome": "Ethereum",
+      "mercato": "Crypto"
+    }
+  ],
+  "breve": {
+    "modello": "claude-sonnet-5-5",
+    "max_token_risposta": 4000,
+    "candidati_max": 12,
+    "idee_max": 5,
+    "rr_minimo": 1.5,
+    "giorni_max": 10,
+    "costo_pct": 0.1,
+    "universo": [
+      {
+        "simbolo": "FTSEMIB.MI",
+        "nome": "FTSE MIB",
+        "mercato": "Indice"
+      },
+      {
+        "simbolo": "^GSPC",
+        "nome": "S&P 500",
+        "mercato": "Indice"
+      },
+      {
+        "simbolo": "^NDX",
+        "nome": "Nasdaq 100",
+        "mercato": "Indice"
+      },
+      {
+        "simbolo": "^GDAXI",
+        "nome": "DAX",
+        "mercato": "Indice"
+      },
+      {
+        "simbolo": "ENI.MI",
+        "nome": "Eni",
+        "mercato": "Italia"
+      },
+      {
+        "simbolo": "ISP.MI",
+        "nome": "Intesa Sanpaolo",
+        "mercato": "Italia"
+      },
+      {
+        "simbolo": "UCG.MI",
+        "nome": "UniCredit",
+        "mercato": "Italia"
+      },
+      {
+        "simbolo": "ENEL.MI",
+        "nome": "Enel",
+        "mercato": "Italia"
+      },
+      {
+        "simbolo": "STLAM.MI",
+        "nome": "Stellantis",
+        "mercato": "Italia"
+      },
+      {
+        "simbolo": "RACE.MI",
+        "nome": "Ferrari",
+        "mercato": "Italia"
+      },
+      {
+        "simbolo": "G.MI",
+        "nome": "Generali",
+        "mercato": "Italia"
+      },
+      {
+        "simbolo": "LDO.MI",
+        "nome": "Leonardo",
+        "mercato": "Italia"
+      },
+      {
+        "simbolo": "STMMI.MI",
+        "nome": "STMicroelectronics",
+        "mercato": "Italia"
+      },
+      {
+        "simbolo": "PRY.MI",
+        "nome": "Prysmian",
+        "mercato": "Italia"
+      },
+      {
+        "simbolo": "TIT.MI",
+        "nome": "Telecom Italia",
+        "mercato": "Italia"
+      },
+      {
+        "simbolo": "ASML.AS",
+        "nome": "ASML",
+        "mercato": "Europa"
+      },
+      {
+        "simbolo": "SAP.DE",
+        "nome": "SAP",
+        "mercato": "Europa"
+      },
+      {
+        "simbolo": "SIE.DE",
+        "nome": "Siemens",
+        "mercato": "Europa"
+      },
+      {
+        "simbolo": "MC.PA",
+        "nome": "LVMH",
+        "mercato": "Europa"
+      },
+      {
+        "simbolo": "AIR.PA",
+        "nome": "Airbus",
+        "mercato": "Europa"
+      },
+      {
+        "simbolo": "AAPL",
+        "nome": "Apple",
+        "mercato": "USA"
+      },
+      {
+        "simbolo": "MSFT",
+        "nome": "Microsoft",
+        "mercato": "USA"
+      },
+      {
+        "simbolo": "NVDA",
+        "nome": "NVIDIA",
+        "mercato": "USA"
+      },
+      {
+        "simbolo": "AMZN",
+        "nome": "Amazon",
+        "mercato": "USA"
+      },
+      {
+        "simbolo": "GOOGL",
+        "nome": "Alphabet",
+        "mercato": "USA"
+      },
+      {
+        "simbolo": "META",
+        "nome": "Meta",
+        "mercato": "USA"
+      },
+      {
+        "simbolo": "TSLA",
+        "nome": "Tesla",
+        "mercato": "USA"
+      },
+      {
+        "simbolo": "AMD",
+        "nome": "AMD",
+        "mercato": "USA"
+      },
+      {
+        "simbolo": "AVGO",
+        "nome": "Broadcom",
+        "mercato": "USA"
+      },
+      {
+        "simbolo": "NFLX",
+        "nome": "Netflix",
+        "mercato": "USA"
+      },
+      {
+        "simbolo": "JPM",
+        "nome": "JPMorgan",
+        "mercato": "USA"
+      },
+      {
+        "simbolo": "XOM",
+        "nome": "Exxon Mobil",
+        "mercato": "USA"
+      },
+      {
+        "simbolo": "LLY",
+        "nome": "Eli Lilly",
+        "mercato": "USA"
+      },
+      {
+        "simbolo": "EURUSD=X",
+        "nome": "EUR/USD",
+        "mercato": "Valute"
+      },
+      {
+        "simbolo": "GBPUSD=X",
+        "nome": "GBP/USD",
+        "mercato": "Valute"
+      },
+      {
+        "simbolo": "USDJPY=X",
+        "nome": "USD/JPY",
+        "mercato": "Valute"
+      },
+      {
+        "simbolo": "GC=F",
+        "nome": "Oro",
+        "mercato": "Materie prime"
+      },
+      {
+        "simbolo": "SI=F",
+        "nome": "Argento",
+        "mercato": "Materie prime"
+      },
+      {
+        "simbolo": "CL=F",
+        "nome": "Petrolio WTI",
+        "mercato": "Materie prime"
+      },
+      {
+        "simbolo": "BTC-USD",
+        "nome": "Bitcoin",
+        "mercato": "Crypto"
+      },
+      {
+        "simbolo": "ETH-USD",
+        "nome": "Ethereum",
+        "mercato": "Crypto"
+      },
+      {
+        "simbolo": "SOL-USD",
+        "nome": "Solana",
+        "mercato": "Crypto"
+      }
+    ]
+  }
+}
