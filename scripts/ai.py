@@ -44,7 +44,9 @@ def chiama(cfg, modello, sistema, prompt, strumento, voce, max_tokens=16000, eff
                       tools=[strumento], tool_choice=scelta)
             if extra:
                 kw["extra_body"] = extra
-            resp = client.messages.create(**kw)
+            # streaming obbligatorio per risposte lunghe (ragionamento esteso): l'SDK rifiuta altrimenti
+            with client.messages.stream(**kw) as flusso:
+                resp = flusso.get_final_message()
             costi.registra(cfg, modello, resp.usage, voce)
             log(f"[{voce}] {modello}: {resp.usage.input_tokens} token in, {resp.usage.output_tokens} out")
             return risposta_strumento(resp), resp.usage
